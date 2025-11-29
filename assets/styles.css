@@ -1,0 +1,15 @@
+/* App custom styles */
+:root{
+  --brand-color: #0d6efd;
+}
+body { font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
+.navbar-brand img{ height:28px; margin-right:8px; vertical-align:middle }
+.card { border-radius: 12px; box-shadow: 0 6px 18px rgba(13,110,253,0.08); }
+.container-fluid { padding-top: 12px; }
+.data-table-container { margin-top: 12px; }
+.action-buttons { display:flex; gap:8px; align-items:center }
+.btn-icon { display:inline-flex; align-items:center; gap:8px }
+.table-search { margin-bottom:8px }
+
+/* Make inputs and selects a bit larger for touch */
+input, select, textarea { height: 38px; }
