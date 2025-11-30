@@ -141,3 +141,54 @@ UNLOCK TABLES;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2025-11-28 21:46:14
+
+--trigger para restrição de horário de consultas na clínica e médico disponível na clínica
+
+DELIMITER $$
+
+CREATE TRIGGER trg_clinica_horario
+BEFORE INSERT ON tabelaconsulta
+FOR EACH ROW
+BEGIN
+    -- Exemplo: não permite agendamento aos domingos
+    IF DAYOFWEEK(NEW.Data_Hora) = 1 THEN  -- 1 = domingo no MySQL
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'A clínica não funciona aos domingos.';
+    END IF;
+
+    -- Exemplo: horário comercial (8h às 18h)
+    IF HOUR(NEW.Data_Hora) < 8 OR HOUR(NEW.Data_Hora) >= 18 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Fora do horário de funcionamento da clínica.';
+    END IF;
+END$$
+
+DELIMITER ;
+
+
+-- Tabela de vínculo (exemplo)
+CREATE TABLE medico_clinica (
+    CodMed CHAR(7),
+    CodCli CHAR(6),
+    PRIMARY KEY (CodMed, CodCli),
+    FOREIGN KEY (CodMed) REFERENCES tabelamedico(CodMed),
+    FOREIGN KEY (CodCli) REFERENCES tabelaclinica(CodCli)
+);
+
+-- Trigger de validação
+DELIMITER $$
+
+CREATE TRIGGER trg_medico_na_clinica
+BEFORE INSERT ON tabelaconsulta
+FOR EACH ROW
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM medico_clinica
+        WHERE CodMed = NEW.CodMed AND CodCli = NEW.CodCli
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Médico não atende nesta clínica.';
+    END IF;
+END$$
+
+DELIMITER ;
