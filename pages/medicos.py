@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from dash import html, dcc, callback, callback_context
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State, ALL

@@ -1,15 +1,300 @@
-/* App custom styles */
-:root{
-  --brand-color: #0d6efd;
-}
-body { font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
-.navbar-brand img{ height:28px; margin-right:8px; vertical-align:middle }
-.card { border-radius: 12px; box-shadow: 0 6px 18px rgba(13,110,253,0.08); }
-.container-fluid { padding-top: 12px; }
-.data-table-container { margin-top: 12px; }
-.action-buttons { display:flex; gap:8px; align-items:center }
-.btn-icon { display:inline-flex; align-items:center; gap:8px }
-.table-search { margin-bottom:8px }
+/* ========================================
+   SISTEMA CONSULTÓRIO MÉDICO - CSS PROFISSIONAL
+   ======================================== */
 
-/* Make inputs and selects a bit larger for touch */
-input, select, textarea { height: 38px; }
+/* ===== VARIÁVEIS E TEMA ===== */
+:root {
+    --primary-color: #0d6efd;
+    --secondary-color: #6c757d;
+    --success-color: #198754;
+    --info-color: #0dcaf0;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --light-bg: #f8f9fa;
+    --white: #ffffff;
+    --card-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    --card-shadow-hover: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    --border-radius: 0.5rem;
+    --transition: all 0.3s ease-in-out;
+}
+
+/* ===== BASE ===== */
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: #f5f7fa;
+    color: #212529;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ===== NAVBAR ===== */
+.navbar {
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    font-weight: 700;
+    transition: var(--transition);
+}
+
+.nav-link {
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.nav-link:hover {
+    transform: translateY(-2px);
+}
+
+/* ===== CARDS ===== */
+.card {
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    transition: var(--transition);
+    overflow: hidden;
+}
+
+.card:hover {
+    box-shadow: var(--card-shadow-hover);
+    transform: translateY(-2px);
+}
+
+.card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: var(--white);
+    border: none;
+    font-weight: 600;
+    padding: 1rem 1.5rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* ===== BOTÕES ===== */
+.btn {
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    padding: 0.5rem 1.5rem;
+    transition: var(--transition);
+    border: none;
+    font-size: 0.9rem;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+}
+
+/* ===== TABELAS ===== */
+.table {
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+    background: var(--white);
+}
+
+.table thead th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: var(--white);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    border: none;
+    padding: 1rem;
+}
+
+.table tbody tr {
+    transition: var(--transition);
+}
+
+.table tbody tr:hover {
+    background-color: rgba(102, 126, 234, 0.05);
+}
+
+.table tbody td {
+    padding: 1rem;
+    vertical-align: middle;
+}
+
+/* ===== FORMULÁRIOS ===== */
+.form-control, .form-select {
+    border-radius: var(--border-radius);
+    border: 2px solid #e9ecef;
+    padding: 0.625rem 1rem;
+    transition: var(--transition);
+    height: 38px;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+.form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+/* ===== MODAIS ===== */
+.modal-content {
+    border-radius: var(--border-radius);
+    border: none;
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: var(--white);
+    border-bottom: none;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+}
+
+/* ===== ALERTS ===== */
+.alert {
+    border-radius: var(--border-radius);
+    border: none;
+    padding: 1rem 1.5rem;
+    box-shadow: var(--card-shadow);
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== BADGES ===== */
+.badge {
+    border-radius: 2rem;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+}
+
+/* ===== DASH DATA TABLES ===== */
+.dash-table-container {
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+}
+
+.dash-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: var(--white) !important;
+    font-weight: 600 !important;
+}
+
+/* ===== DROPDOWNS E Z-INDEX ===== */
+.Select-menu-outer {
+    z-index: 9999 !important;
+}
+
+.dash-dropdown {
+    z-index: 1000;
+}
+
+.dash-dropdown .Select-menu-outer {
+    z-index: 9999 !important;
+}
+
+/* Garantir que dropdowns fiquem acima de cards */
+.card {
+    z-index: 1;
+    position: relative;
+}
+
+/* ===== ANIMAÇÕES ===== */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.container, .container-fluid {
+    animation: fadeIn 0.5s ease-in;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+}
+
+/* ===== UTILITÁRIOS ===== */
+.shadow-sm {
+    box-shadow: var(--card-shadow) !important;
+}
+
+.bi {
+    vertical-align: middle;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.data-table-container {
+    margin-top: 12px;
+}
+
+/* ===== RESPONSIVIDADE ===== */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .btn {
+        font-size: 0.8rem;
+        padding: 0.4rem 1rem;
+    }
+    
+    .table {
+        font-size: 0.85rem;
+    }
+}

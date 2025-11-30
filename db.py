@@ -48,6 +48,9 @@ class Database:
 
         conn = sqlite3.connect(path, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES, check_same_thread=False)
         conn.row_factory = sqlite3.Row
+        # Garantir UTF-8
+        conn.execute("PRAGMA encoding = 'UTF-8'")
+        conn.text_factory = str
         # registra funções compatíveis com MySQL usadas nas queries
         try:
             conn.create_function('NOW', 0, lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S'))

@@ -1,31 +1,51 @@
+# -*- coding: utf-8 -*-
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
-from pages import home, pacientes, medicos, clinicas, consultas
+from pages import home, pacientes, medicos, clinicas, consultas, analytics
 from dash import html
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP, dbc.icons.BOOTSTRAP], suppress_callback_exceptions=True)
 
-# registra callbacks da home (filtros)
+# Registra callbacks das páginas
 try:
     home.register_callbacks(app)
 except Exception:
     pass
 
-navbar = dbc.NavbarSimple(
-    children=[
-        dbc.NavItem(dbc.NavLink("Início", href="/")),
-        dbc.NavItem(dbc.NavLink("Pacientes", href="/pacientes")),
-        dbc.NavItem(dbc.NavLink("Médicos", href="/medicos")),
-        dbc.NavItem(dbc.NavLink("Clínicas", href="/clinicas")),
-        dbc.NavItem(dbc.NavLink("Consultas", href="/consultas")),
-    ],
-    brand=html.Span([html.Img(src='/assets/icons/logo.svg', height='28'), html.Span("Sistema Consultório Médico")]),
-    brand_href="/",
+try:
+    analytics.register_callbacks(app)
+except Exception:
+    pass
+
+navbar = dbc.Navbar(
+    dbc.Container([
+        dbc.Row([
+            dbc.Col([
+                dbc.NavbarBrand([
+                    html.I(className="bi bi-hospital-fill me-2"),
+                    "Sistema Consultório Médico"
+                ], href="/", className="fs-4")
+            ]),
+        ], className="flex-grow-1 align-items-center"),
+        dbc.Row([
+            dbc.Col([
+                dbc.Nav([
+                    dbc.NavItem(dbc.NavLink([html.I(className="bi bi-house-fill me-1"), "Início"], href="/", className="px-3")),
+                    dbc.NavItem(dbc.NavLink([html.I(className="bi bi-people-fill me-1"), "Pacientes"], href="/pacientes", className="px-3")),
+                    dbc.NavItem(dbc.NavLink([html.I(className="bi bi-person-badge-fill me-1"), "Médicos"], href="/medicos", className="px-3")),
+                    dbc.NavItem(dbc.NavLink([html.I(className="bi bi-building-fill me-1"), "Clínicas"], href="/clinicas", className="px-3")),
+                    dbc.NavItem(dbc.NavLink([html.I(className="bi bi-calendar-check-fill me-1"), "Consultas"], href="/consultas", className="px-3")),
+                    dbc.NavItem(dbc.NavLink([html.I(className="bi bi-bar-chart-fill me-1"), "Analytics"], href="/analytics", className="px-3")),
+                ], navbar=True, className="ms-auto")
+            ])
+        ], className="flex-grow-1")
+    ], fluid=True),
     color="primary",
     dark=True,
-    className="mb-4"
+    className="mb-4 shadow-sm",
+    style={"minHeight": "70px"}
 )
 
 app.layout = html.Div([
@@ -45,6 +65,8 @@ def display_page(pathname):
         return clinicas.layout
     elif pathname == '/consultas':
         return consultas.layout
+    elif pathname == '/analytics':
+        return analytics.layout
     else:
         # home provides a build_layout() function which checks DB connectivity
         try:
@@ -54,4 +76,4 @@ def display_page(pathname):
             return html.Div([html.H3("Erro ao montar a página inicial")])
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host='0.0.0.0', port=8050)
+    app.run(debug=True, host='127.0.0.1', port=8050)
