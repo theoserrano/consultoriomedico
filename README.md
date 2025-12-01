@@ -52,22 +52,33 @@ pip install -r requirements.txt
 As novas dependências incluem:
 - `Faker==22.0.0` - Geração de dados artificiais
 
-### 2. Popular o Banco de Dados
+### 2. Configurar Banco de Dados MySQL
 
-Execute o script de população para criar dados de demonstração:
+**Opção A: Banco Completo (Recomendado - dados fixos para todos)**
 
 ```bash
-python populate_database.py
+mysql -u root -p < banco_completo.sql
 ```
 
-Este script irá:
-- ✅ Limpar dados existentes (opcional)
-- ✅ Criar 200 pacientes realistas
-- ✅ Criar 80 médicos com especialidades variadas
-- ✅ Criar 12 clínicas
-- ✅ Gerar 1500 consultas distribuídas ao longo de 120 dias
+Isso importa estrutura + 1662 registros já prontos:
+- ✅ 111 pacientes
+- ✅ 45 médicos  
+- ✅ 6 clínicas
+- ✅ 1500 consultas
 
-**⚠️ Atenção:** O script limpa os dados existentes por padrão. Comente as linhas de DELETE no código se quiser manter dados anteriores.
+**Opção B: Gerar Dados Aleatórios (únicos em cada máquina)**
+
+```bash
+# Primeiro crie apenas a estrutura
+mysql -u root -p
+CREATE DATABASE consultoriomedico;
+USE consultoriomedico;
+SOURCE consultoriomedio.sql;
+exit;
+
+# Depois popule com dados aleatórios
+python populate_mysql.py
+```
 
 ### 3. Executar a Aplicação
 

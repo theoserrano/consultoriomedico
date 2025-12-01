@@ -35,9 +35,15 @@ Abra o MySQL Workbench ou o terminal MySQL e execute:
 CREATE DATABASE consultoriomedico CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-### 2.2 Criar as Tabelas
+### 2.2 Importar Estrutura e Dados
 
-Execute o script SQL fornecido:
+**Opção Recomendada:** Use o dump completo que já inclui estrutura e dados:
+
+```bash
+mysql -u root -p < banco_completo.sql
+```
+
+**Opção Alternativa:** Crie apenas a estrutura e depois popule:
 
 ```bash
 # No terminal MySQL
@@ -47,7 +53,7 @@ SOURCE consultoriomedio.sql;
 
 Ou no MySQL Workbench:
 - File → Open SQL Script
-- Selecione o arquivo `consultoriomedio.sql`
+- Selecione o arquivo `banco_completo.sql`
 - Execute o script (⚡ ícone de raio)
 
 ---
@@ -106,19 +112,33 @@ pip3 install -r requirements.txt
 
 ---
 
-## 🎲 Passo 5: Popular o Banco com Dados de Teste (Opcional)
+## 🎲 Passo 5: Popular o Banco com Dados
 
-Para ter dados de demonstração:
+### Opção A: Dados Fixos (Recomendado - todos terão os mesmos dados)
+
+Importe o dump completo com estrutura e dados já prontos:
+
+```bash
+mysql -u root -p < banco_completo.sql
+```
+
+Isso cria o banco e insere:
+- 111 pacientes
+- 45 médicos  
+- 6 clínicas
+- 1500 consultas
+
+### Opção B: Gerar Dados Aleatórios (únicos para cada instalação)
 
 ```bash
 python populate_mysql.py
 ```
 
-Isso irá criar:
-- ~200 pacientes
-- ~80 médicos
-- ~12 clínicas
-- ~1500 consultas
+Isso irá criar dados diferentes em cada máquina:
+- ~200 pacientes aleatórios
+- ~80 médicos aleatórios
+- ~12 clínicas aleatórias
+- ~1500 consultas aleatórias
 
 ---
 
