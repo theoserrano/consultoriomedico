@@ -2,6 +2,12 @@
 
 Sistema completo de gerenciamento para consultórios médicos com dashboard moderno e analytics avançados.
 
+![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
+![Dash](https://img.shields.io/badge/dash-2.14.2-brightgreen.svg)
+![MySQL](https://img.shields.io/badge/mysql-8.0+-orange.svg)
+
+> 📋 **GUIA DE INSTALAÇÃO COMPLETO**: [INSTALACAO.md](INSTALACAO.md)
+
 ## ✨ Novidades da Versão Profissional
 
 ### 🎨 Design Completamente Reformulado

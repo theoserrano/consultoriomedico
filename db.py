@@ -206,10 +206,11 @@ class Database:
                 logger.error(f"Erro SQLite ao buscar dados: {e}")
                 return []
 
-        cursor = self.connection.cursor(dictionary=True)
+        cursor = self.connection.cursor(dictionary=True, buffered=True)
         try:
             cursor.execute(query, params or ())
-            return cursor.fetchall()
+            rows = cursor.fetchall()
+            return rows
         except Error as e:
             logger.error(f"Erro ao buscar dados: {e}")
             return []
@@ -235,6 +236,21 @@ class Database:
             except Exception as e:
                 logger.error(f"Erro SQLite ao buscar dado único: {e}")
                 return None
+        
+        # MySQL path
+        cursor = self.connection.cursor(dictionary=True, buffered=True)
+        try:
+            cursor.execute(query, params or ())
+            row = cursor.fetchone()
+            return row
+        except Error as e:
+            logger.error(f"Erro ao buscar dado único: {e}")
+            return None
+        finally:
+            try:
+                cursor.close()
+            except Exception:
+                pass
 
     def fetch_all_paginated(self, query, params=None, limit=None, offset=None):
         """Busca com suporte a LIMIT/OFFSET de forma portável entre MySQL e SQLite.
