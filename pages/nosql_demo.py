@@ -460,6 +460,3 @@ def register_callbacks(app):
             fig = {}
         
         return mysql_stats, firebase_stats, fig
-
-# Registra callbacks
-register_callbacks(None)

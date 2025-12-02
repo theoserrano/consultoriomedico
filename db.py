@@ -219,20 +219,27 @@ class Database:
                 logger.error(f"Erro SQLite ao buscar dados: {e}")
                 return []
 
-        cursor = self.connection.cursor(dictionary=True, buffered=True)
+        cursor = None
         try:
+            cursor = self.connection.cursor(dictionary=True, buffered=True)
             cursor.execute(query, params or ())
-            # Materializa completamente os resultados antes de fechar o cursor
-            rows = list(cursor.fetchall())
+            # Materializa completamente os resultados convertendo para dicionários Python nativos
+            rows = []
+            for row in cursor.fetchall():
+                rows.append(dict(row))
             return rows
         except Error as e:
             logger.error(f"Erro ao buscar dados: {e}")
             return []
+        except Exception as e:
+            logger.error(f"Erro inesperado ao buscar dados: {e}")
+            return []
         finally:
-            try:
-                cursor.close()
-            except Exception:
-                pass
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
 
     def fetch_one(self, query, params=None):
         if not self.ensure_connected():
@@ -252,19 +259,25 @@ class Database:
                 return None
         
         # MySQL path
-        cursor = self.connection.cursor(dictionary=True, buffered=True)
+        cursor = None
         try:
+            cursor = self.connection.cursor(dictionary=True, buffered=True)
             cursor.execute(query, params or ())
             row = cursor.fetchone()
-            return row
+            # Converte para dicionário Python nativo
+            return dict(row) if row else None
         except Error as e:
             logger.error(f"Erro ao buscar dado único: {e}")
             return None
+        except Exception as e:
+            logger.error(f"Erro inesperado ao buscar dado único: {e}")
+            return None
         finally:
-            try:
-                cursor.close()
-            except Exception:
-                pass
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
 
     def fetch_all_paginated(self, query, params=None, limit=None, offset=None):
         """Busca com suporte a LIMIT/OFFSET de forma portável entre MySQL e SQLite.
