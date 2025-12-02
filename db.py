@@ -222,7 +222,8 @@ class Database:
         cursor = self.connection.cursor(dictionary=True, buffered=True)
         try:
             cursor.execute(query, params or ())
-            rows = cursor.fetchall()
+            # Materializa completamente os resultados antes de fechar o cursor
+            rows = list(cursor.fetchall())
             return rows
         except Error as e:
             logger.error(f"Erro ao buscar dados: {e}")
