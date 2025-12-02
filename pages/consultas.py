@@ -237,10 +237,16 @@ def salvar_consulta(n_clicks, cli, med, pac, data, hora, current_trigger):
         success, msg = db.execute_query(query, params)
         
         if success:
-            return dbc.Alert("Consulta agendada com sucesso! (Trigger de auditoria ativado)", color="success", duration=3000), False, (current_trigger or 0) + 1
+            # Verifica se há warnings/avisos na mensagem (ex: triggers)
+            if "Avisos:" in msg:
+                return dbc.Alert(["Consulta agendada! ", html.Br(), msg], color="warning", duration=5000), False, (current_trigger or 0) + 1
+            return dbc.Alert("Consulta agendada com sucesso!", color="success", duration=3000), False, (current_trigger or 0) + 1
         else:
+            # Mensagens de erro dos triggers aparecem aqui
+            if "Regra de Negócio" in msg:
+                return dbc.Alert([html.Strong("Regra de Negócio Violada:"), html.Br(), msg.split(":", 1)[1] if ":" in msg else msg], color="danger", duration=7000), True, current_trigger or 0
             if "Duplicate entry" in msg or "já existe" in msg:
-                return dbc.Alert("Erro: Já existe uma consulta agendada neste horário para este médico! (Trigger impediu duplicação)", color="danger", duration=5000), True, current_trigger or 0
+                return dbc.Alert("Erro: Já existe uma consulta agendada neste horário para este médico!", color="danger", duration=5000), True, current_trigger or 0
             return dbc.Alert(f"Erro: {msg}", color="danger", duration=5000), True, current_trigger or 0
     except Exception as e:
         return dbc.Alert(f"Erro inesperado: {str(e)}", color="danger", duration=5000), True, current_trigger or 0
@@ -294,7 +300,10 @@ def deletar_consulta(n_clicks, dados, current_trigger):
             success, msg = db.execute_query(query, (cli, med, pac, data_hora))
             
             if success:
-                return dbc.Alert("Consulta excluída com sucesso! (Trigger de auditoria ativado)", color="success", duration=3000), False, (current_trigger or 0) + 1
+                # Verifica se há warnings/avisos na mensagem
+                if "Avisos:" in msg:
+                    return dbc.Alert(["Consulta excluída! ", html.Br(), msg], color="warning", duration=5000), False, (current_trigger or 0) + 1
+                return dbc.Alert("Consulta excluída com sucesso!", color="success", duration=3000), False, (current_trigger or 0) + 1
             else:
                 return dbc.Alert(f"Erro ao excluir: {msg}", color="danger", duration=5000), True, current_trigger or 0
     

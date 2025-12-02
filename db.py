@@ -192,10 +192,23 @@ class Database:
         try:
             cursor.execute(query, params or ())
             self.connection.commit()
+            
+            # Captura warnings do MySQL (incluindo triggers)
+            warnings = []
+            if cursor.warnings:
+                cursor.execute("SHOW WARNINGS")
+                for level, code, message in cursor.fetchall():
+                    warning_msg = f"{level} ({code}): {message}"
+                    warnings.append(warning_msg)
+                    logger.warning(f"MySQL Warning: {warning_msg}")
+            
+            if warnings:
+                return True, "Operação realizada. Avisos: " + "; ".join(warnings)
             return True, "Operação realizada com sucesso"
         except Error as e:
-            logger.error(f"Erro ao executar query: {e}")
-            return False, str(e)
+            error_msg = str(e)
+            logger.error(f"Erro ao executar query: {error_msg}")
+            return False, error_msg
         finally:
             try:
                 cursor.close()

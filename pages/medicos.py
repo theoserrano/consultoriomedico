@@ -245,6 +245,9 @@ def salvar_medico(n_clicks, acao, cod, nome, espec, genero, tel, email, current_
         success, msg = db.execute_query(query, params)
         
         if success:
+            # Verifica se há warnings/avisos na mensagem
+            if "Avisos:" in msg:
+                return dbc.Alert(["Médico salvo! ", html.Br(), msg], color="warning", duration=5000), False, (current_trigger or 0) + 1
             return dbc.Alert("Médico salvo com sucesso!", color="success", duration=3000), False, (current_trigger or 0) + 1
         else:
             return dbc.Alert(f"Erro: {msg}", color="danger", duration=5000), True, current_trigger or 0
@@ -292,6 +295,9 @@ def deletar_medico(n_clicks, cod, current_trigger):
         success, msg = db.execute_query("DELETE FROM tabelamedico WHERE CodMed = %s", (cod,))
         
         if success:
+            # Verifica se há warnings/avisos na mensagem
+            if "Avisos:" in msg:
+                return dbc.Alert(["Médico excluído! ", html.Br(), msg], color="warning", duration=5000), False, (current_trigger or 0) + 1
             return dbc.Alert("Médico excluído com sucesso!", color="success", duration=3000), False, (current_trigger or 0) + 1
         else:
             return dbc.Alert(f"Erro ao excluir: {msg}", color="danger", duration=5000), True, current_trigger or 0

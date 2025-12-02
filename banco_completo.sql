@@ -241,7 +241,7 @@ CREATE TABLE `tabelaconsulta` (
   KEY `CpfPaciente` (`CpfPaciente`),
   CONSTRAINT `tabelaconsulta_ibfk_1` FOREIGN KEY (`CodCli`) REFERENCES `tabelaclinica` (`CodCli`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `tabelaconsulta_ibfk_2` FOREIGN KEY (`CodMed`) REFERENCES `tabelamedico` (`CodMed`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `tabelaconsulta_ibfk_3` FOREIGN KEY (`CpfPaciente`) REFERENCES `tabelapaciente` (`CpfPaciente`) ON DELETE RESTRICT ON UPDATE CASCADE
+  CONSTRAINT `tabelaconsulta_ibfk_3` FOREIGN KEY (`CpfPaciente`) REFERENCES `tabelapaciente` (`CpfPaciente`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Dados da tabela: tabelaconsulta
@@ -1650,7 +1650,7 @@ INSERT INTO `tabelaconsulta` (`CodCli`, `CodMed`, `CpfPaciente`, `Data_Hora`) VA
 ('628169', '9296527', '98434563947', '2025-10-13 16:30:00'),
 ('648111', '9296527', '01703334674', '2026-01-19 10:15:00'),
 ('648111', '9296527', '03019228404', '2026-01-06 17:00:00'),
-('648111', '9296527', '13519350053', '2025-12-25 15:30:00'),
+('648111', '9296527', '13519350053', '2025-12-25 15:30:00'),c
 ('648111', '9296527', '26026961537', '2025-11-27 09:00:00'),
 ('648111', '9296527', '51331724901', '2025-11-03 08:00:00'),
 ('648111', '9296527', '65597507059', '2026-01-05 16:15:00'),
