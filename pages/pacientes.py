@@ -85,16 +85,16 @@ layout = dbc.Container([
     
     dcc.Store(id='store-paciente-acao'),
     dcc.Store(id='store-cpf-delete'),
+    dcc.Store(id='store-refresh-trigger', data=0),
     html.Div(id="alert-paciente")
 ], fluid=True)
 
 @callback(
     Output("tabela-pacientes", "children"),
     Input("filtro-paciente", "value"),
-    Input("btn-salvar-paciente", "n_clicks"),
-    Input("btn-confirmar-delete", "n_clicks")
+    Input("store-refresh-trigger", "data")
 )
-def atualizar_tabela(filtro, save_clicks, del_clicks):
+def atualizar_tabela(filtro, refresh_trigger):
     # Se não conectado, retornar alerta informativo
     if not db.ensure_connected():
         return dbc.Alert("Sem conexão com o banco de dados. Verifique o arquivo .env e o serviço MySQL.", color="danger")
@@ -217,6 +217,8 @@ def toggle_modal(novo_click, edit_selected_click, edit_clicks, fechar_click, edi
 
 @callback(
     Output("alert-paciente", "children"),
+    Output("modal-paciente", "is_open", allow_duplicate=True),
+    Output("store-refresh-trigger", "data"),
     Input("btn-salvar-paciente", "n_clicks"),
     State("store-paciente-acao", "data"),
     State("input-cpf", "value"),
@@ -225,39 +227,44 @@ def toggle_modal(novo_click, edit_selected_click, edit_clicks, fechar_click, edi
     State("input-genero-pac", "value"),
     State("input-tel-pac", "value"),
     State("input-email-pac", "value"),
+    State("store-refresh-trigger", "data"),
     prevent_initial_call=True
 )
-def salvar_paciente(n_clicks, acao, cpf, nome, data_nasc, genero, tel, email):
+def salvar_paciente(n_clicks, acao, cpf, nome, data_nasc, genero, tel, email, current_trigger):
     if not cpf or not nome:
-        return dbc.Alert("CPF e Nome são obrigatórios!", color="danger", duration=3000)
+        return dbc.Alert("CPF e Nome são obrigatórios!", color="danger", duration=3000), True, current_trigger or 0
     
     if len(cpf) != 11:
-        return dbc.Alert("CPF deve ter 11 dígitos!", color="danger", duration=3000)
+        return dbc.Alert("CPF deve ter 11 dígitos!", color="danger", duration=3000), True, current_trigger or 0
     
-    if acao == "create":
-        query = """
-        INSERT INTO tabelapaciente (CpfPaciente, NomePac, DataNascimento, Genero, Telefone, Email)
-        VALUES (%s, %s, %s, %s, %s, %s)
-        """
-        params = (cpf, nome, data_nasc or None, genero or None, tel or None, email or None)
-    else:
-        query = """
-        UPDATE tabelapaciente 
-        SET NomePac=%s, DataNascimento=%s, Genero=%s, Telefone=%s, Email=%s
-        WHERE CpfPaciente=%s
-        """
-        params = (nome, data_nasc or None, genero or None, tel or None, email or None, cpf)
-    
-    success, msg = db.execute_query(query, params)
-    
-    if success:
-        return dbc.Alert("Paciente salvo com sucesso!", color="success", duration=3000)
-    else:
-        return dbc.Alert(f"Erro: {msg}", color="danger", duration=5000)
+    try:
+        if acao == "create":
+            query = """
+            INSERT INTO tabelapaciente (CpfPaciente, NomePac, DataNascimento, Genero, Telefone, Email)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            params = (cpf, nome, data_nasc or None, genero or None, tel or None, email or None)
+        else:
+            query = """
+            UPDATE tabelapaciente 
+            SET NomePac=%s, DataNascimento=%s, Genero=%s, Telefone=%s, Email=%s
+            WHERE CpfPaciente=%s
+            """
+            params = (nome, data_nasc or None, genero or None, tel or None, email or None, cpf)
+        
+        success, msg = db.execute_query(query, params)
+        
+        if success:
+            return dbc.Alert("Paciente salvo com sucesso!", color="success", duration=3000), False, (current_trigger or 0) + 1
+        else:
+            return dbc.Alert(f"Erro: {msg}", color="danger", duration=5000), True, current_trigger or 0
+    except Exception as e:
+        return dbc.Alert(f"Erro inesperado: {str(e)}", color="danger", duration=5000), True, current_trigger or 0
 
 @callback(
     Output("modal-delete-paciente", "is_open"),
     Output("store-cpf-delete", "data"),
+    Output("store-refresh-trigger", "data", allow_duplicate=True),
     Input({'type': 'btn-delete-pac', 'index': ALL}, "n_clicks"),
     Input('btn-delete-selected-pac', 'n_clicks'),
     Input("btn-confirmar-delete", "n_clicks"),
@@ -265,35 +272,47 @@ def salvar_paciente(n_clicks, acao, cpf, nome, data_nasc, genero, tel, email):
     State({'type': 'btn-delete-pac', 'index': ALL}, "id"),
     State('pacientes-datatable', 'selected_rows'),
     State('pacientes-datatable', 'data'),
+    State('store-cpf-delete', 'data'),
+    State('store-refresh-trigger', 'data'),
     prevent_initial_call=True
 )
-def toggle_delete_modal(delete_clicks, delete_selected_click, confirm_click, cancel_click, delete_ids, selected_rows, table_data):
+def toggle_delete_modal(delete_clicks, delete_selected_click, confirm_click, cancel_click, delete_ids, selected_rows, table_data, cpf_stored, current_trigger):
     ctx = callback_context
     
     if not ctx.triggered:
-        return False, None
+        return False, None, current_trigger or 0
     triggered = ctx.triggered[0]
     if triggered.get('value') in (None, 0, False, ''):
-        return False, None
+        return False, None, current_trigger or 0
 
     trigger_id = triggered['prop_id'].split('.')[0]
 
     if 'btn-delete-selected-pac' in trigger_id:
         if not selected_rows or not table_data:
-            return False, None
+            return False, None, current_trigger or 0
         idx = selected_rows[0]
         try:
             row = table_data[idx]
             cpf = row.get('CpfPaciente')
         except Exception:
-            return False, None
-        return True, cpf
+            return False, None, current_trigger or 0
+        return True, cpf, current_trigger or 0
 
     if "btn-delete-pac" in trigger_id:
         button_id = json.loads(trigger_id)
-        return True, button_id['index']
+        return True, button_id['index'], current_trigger or 0
     
-    return False, None
+    if "btn-confirmar-delete" in trigger_id and cpf_stored:
+        try:
+            db.execute_query("DELETE FROM tabelapaciente WHERE CpfPaciente = %s", (cpf_stored,))
+        except Exception:
+            pass
+        return False, None, (current_trigger or 0) + 1
+    
+    if "btn-cancelar-delete" in trigger_id:
+        return False, None, current_trigger or 0
+    
+    return False, None, current_trigger or 0
 
 @callback(
     Output("alert-paciente", "children", allow_duplicate=True),

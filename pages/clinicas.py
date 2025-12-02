@@ -68,15 +68,15 @@ layout = dbc.Container([
     
     dcc.Store(id='store-clinica-acao'),
     dcc.Store(id='store-codcli-delete'),
+    dcc.Store(id='store-refresh-trigger-cli', data=0),
     html.Div(id="alert-clinica")
 ], fluid=True)
 
 @callback(
     Output("tabela-clinicas", "children"),
-    Input("btn-salvar-clinica", "n_clicks"),
-    Input("btn-confirmar-delete-cli", "n_clicks")
+    Input("store-refresh-trigger-cli", "data")
 )
-def atualizar_tabela(save_clicks, del_clicks):
+def atualizar_tabela(refresh_trigger):
     clinicas = db.fetch_all("SELECT * FROM tabelaclinica")
     
     if not clinicas:
@@ -157,6 +157,8 @@ def toggle_modal(novo_click, edit_clicks, fechar_click, edit_ids):
 
 @callback(
     Output("alert-clinica", "children"),
+    Output("modal-clinica", "is_open", allow_duplicate=True),
+    Output("store-refresh-trigger-cli", "data"),
     Input("btn-salvar-clinica", "n_clicks"),
     State("store-clinica-acao", "data"),
     State("input-codcli", "value"),
@@ -164,35 +166,39 @@ def toggle_modal(novo_click, edit_clicks, fechar_click, edit_ids):
     State("input-endereco", "value"),
     State("input-tel-cli", "value"),
     State("input-email-cli", "value"),
+    State("store-refresh-trigger-cli", "data"),
     prevent_initial_call=True
 )
-def salvar_clinica(n_clicks, acao, cod, nome, end, tel, email):
+def salvar_clinica(n_clicks, acao, cod, nome, end, tel, email, current_trigger):
     if not cod or not nome:
-        return dbc.Alert("Código e Nome são obrigatórios!", color="danger", duration=3000)
+        return dbc.Alert("Código e Nome são obrigatórios!", color="danger", duration=3000), True, current_trigger or 0
     
     if len(cod) != 6:
-        return dbc.Alert("Código deve ter 6 dígitos!", color="danger", duration=3000)
+        return dbc.Alert("Código deve ter 6 dígitos!", color="danger", duration=3000), True, current_trigger or 0
     
-    if acao == "create":
-        query = """
-        INSERT INTO tabelaclinica (CodCli, NomeCli, Endereco, Telefone, Email)
-        VALUES (%s, %s, %s, %s, %s)
-        """
-        params = (cod, nome, end or None, tel or None, email or None)
-    else:
-        query = """
-        UPDATE tabelaclinica 
-        SET NomeCli=%s, Endereco=%s, Telefone=%s, Email=%s
-        WHERE CodCli=%s
-        """
-        params = (nome, end or None, tel or None, email or None, cod)
-    
-    success, msg = db.execute_query(query, params)
-    
-    if success:
-        return dbc.Alert("Clínica salva com sucesso!", color="success", duration=3000)
-    else:
-        return dbc.Alert(f"Erro: {msg}", color="danger", duration=5000)
+    try:
+        if acao == "create":
+            query = """
+            INSERT INTO tabelaclinica (CodCli, NomeCli, Endereco, Telefone, Email)
+            VALUES (%s, %s, %s, %s, %s)
+            """
+            params = (cod, nome, end or None, tel or None, email or None)
+        else:
+            query = """
+            UPDATE tabelaclinica 
+            SET NomeCli=%s, Endereco=%s, Telefone=%s, Email=%s
+            WHERE CodCli=%s
+            """
+            params = (nome, end or None, tel or None, email or None, cod)
+        
+        success, msg = db.execute_query(query, params)
+        
+        if success:
+            return dbc.Alert("Clínica salva com sucesso!", color="success", duration=3000), False, (current_trigger or 0) + 1
+        else:
+            return dbc.Alert(f"Erro: {msg}", color="danger", duration=5000), True, current_trigger or 0
+    except Exception as e:
+        return dbc.Alert(f"Erro inesperado: {str(e)}", color="danger", duration=5000), True, current_trigger or 0
 
 @callback(
     Output("modal-delete-clinica", "is_open"),
@@ -223,17 +229,20 @@ def toggle_delete_modal(delete_clicks, confirm_click, cancel_click, delete_ids):
 
 @callback(
     Output("alert-clinica", "children", allow_duplicate=True),
+    Output("modal-delete-clinica", "is_open", allow_duplicate=True),
+    Output("store-refresh-trigger-cli", "data", allow_duplicate=True),
     Input("btn-confirmar-delete-cli", "n_clicks"),
     State("store-codcli-delete", "data"),
+    State("store-refresh-trigger-cli", "data"),
     prevent_initial_call=True
 )
-def deletar_clinica(n_clicks, cod):
+def deletar_clinica(n_clicks, cod, current_trigger):
     if cod:
         success, msg = db.execute_query("DELETE FROM tabelaclinica WHERE CodCli = %s", (cod,))
         
         if success:
-            return dbc.Alert("Clínica excluída com sucesso!", color="success", duration=3000)
+            return dbc.Alert("Clínica excluída com sucesso!", color="success", duration=3000), False, (current_trigger or 0) + 1
         else:
-            return dbc.Alert(f"Erro ao excluir: {msg}", color="danger", duration=5000)
+            return dbc.Alert(f"Erro ao excluir: {msg}", color="danger", duration=5000), True, current_trigger or 0
     
-    return None
+    return None, False, current_trigger or 0

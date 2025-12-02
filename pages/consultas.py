@@ -85,6 +85,7 @@ layout = dbc.Container([
     
     dcc.Store(id='store-consulta-acao'),
     dcc.Store(id='store-consulta-delete'),
+    dcc.Store(id='store-refresh-trigger-cons', data=0),
     html.Div(id="alert-consulta")
 ], fluid=True)
 
@@ -92,13 +93,12 @@ layout = dbc.Container([
     Output("tabela-consultas", "children"),
     Output("filtro-medico-cons", "options"),
     Input("btn-aplicar-filtros", "n_clicks"),
-    Input("btn-salvar-consulta", "n_clicks"),
-    Input("btn-confirmar-delete-cons", "n_clicks"),
+    Input("store-refresh-trigger-cons", "data"),
     State("filtro-data-inicio", "value"),
     State("filtro-data-fim", "value"),
     State("filtro-medico-cons", "value")
 )
-def atualizar_tabela(apply_click, save_click, del_click, data_ini, data_fim, medico_filtro):
+def atualizar_tabela(apply_click, refresh_trigger, data_ini, data_fim, medico_filtro):
     # proteção: se sem conexão, retornar alerta e opções vazias
     if not db.ensure_connected():
         return dbc.Alert("Sem conexão com o banco de dados. Verifique o arquivo .env e o serviço MySQL.", color="danger"), []
@@ -210,34 +210,40 @@ def toggle_modal(novo_click, fechar_click):
 
 @callback(
     Output("alert-consulta", "children"),
+    Output("modal-consulta", "is_open", allow_duplicate=True),
+    Output("store-refresh-trigger-cons", "data"),
     Input("btn-salvar-consulta", "n_clicks"),
     State("input-clinica-cons", "value"),
     State("input-medico-cons", "value"),
     State("input-paciente-cons", "value"),
     State("input-data-cons", "value"),
     State("input-hora-cons", "value"),
+    State("store-refresh-trigger-cons", "data"),
     prevent_initial_call=True
 )
-def salvar_consulta(n_clicks, cli, med, pac, data, hora):
+def salvar_consulta(n_clicks, cli, med, pac, data, hora, current_trigger):
     if not all([cli, med, pac, data, hora]):
-        return dbc.Alert("Todos os campos são obrigatórios!", color="danger", duration=3000)
+        return dbc.Alert("Todos os campos são obrigatórios!", color="danger", duration=3000), True, current_trigger or 0
     
-    data_hora = f"{data} {hora}:00"
-    
-    query = """
-    INSERT INTO tabelaconsulta (CodCli, CodMed, CpfPaciente, Data_Hora)
-    VALUES (%s, %s, %s, %s)
-    """
-    params = (cli, med, pac, data_hora)
-    
-    success, msg = db.execute_query(query, params)
-    
-    if success:
-        return dbc.Alert("Consulta agendada com sucesso! (Trigger de auditoria ativado)", color="success", duration=3000)
-    else:
-        if "Duplicate entry" in msg or "já existe" in msg:
-            return dbc.Alert("Erro: Já existe uma consulta agendada neste horário para este médico! (Trigger impediu duplicação)", color="danger", duration=5000)
-        return dbc.Alert(f"Erro: {msg}", color="danger", duration=5000)
+    try:
+        data_hora = f"{data} {hora}:00"
+        
+        query = """
+        INSERT INTO tabelaconsulta (CodCli, CodMed, CpfPaciente, Data_Hora)
+        VALUES (%s, %s, %s, %s)
+        """
+        params = (cli, med, pac, data_hora)
+        
+        success, msg = db.execute_query(query, params)
+        
+        if success:
+            return dbc.Alert("Consulta agendada com sucesso! (Trigger de auditoria ativado)", color="success", duration=3000), False, (current_trigger or 0) + 1
+        else:
+            if "Duplicate entry" in msg or "já existe" in msg:
+                return dbc.Alert("Erro: Já existe uma consulta agendada neste horário para este médico! (Trigger impediu duplicação)", color="danger", duration=5000), True, current_trigger or 0
+            return dbc.Alert(f"Erro: {msg}", color="danger", duration=5000), True, current_trigger or 0
+    except Exception as e:
+        return dbc.Alert(f"Erro inesperado: {str(e)}", color="danger", duration=5000), True, current_trigger or 0
 
 @callback(
     Output("modal-delete-consulta", "is_open"),
@@ -268,11 +274,14 @@ def toggle_delete_modal(delete_clicks, confirm_click, cancel_click, delete_ids):
 
 @callback(
     Output("alert-consulta", "children", allow_duplicate=True),
+    Output("modal-delete-consulta", "is_open", allow_duplicate=True),
+    Output("store-refresh-trigger-cons", "data", allow_duplicate=True),
     Input("btn-confirmar-delete-cons", "n_clicks"),
     State("store-consulta-delete", "data"),
+    State("store-refresh-trigger-cons", "data"),
     prevent_initial_call=True
 )
-def deletar_consulta(n_clicks, dados):
+def deletar_consulta(n_clicks, dados, current_trigger):
     if dados:
         parts = dados.split('|')
         if len(parts) == 4:
@@ -285,8 +294,8 @@ def deletar_consulta(n_clicks, dados):
             success, msg = db.execute_query(query, (cli, med, pac, data_hora))
             
             if success:
-                return dbc.Alert("Consulta excluída com sucesso! (Trigger de auditoria ativado)", color="success", duration=3000)
+                return dbc.Alert("Consulta excluída com sucesso! (Trigger de auditoria ativado)", color="success", duration=3000), False, (current_trigger or 0) + 1
             else:
-                return dbc.Alert(f"Erro ao excluir: {msg}", color="danger", duration=5000)
+                return dbc.Alert(f"Erro ao excluir: {msg}", color="danger", duration=5000), True, current_trigger or 0
     
-    return None 
+    return None, False, current_trigger or 0 

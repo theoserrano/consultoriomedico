@@ -91,6 +91,7 @@ layout = dbc.Container([
     
     dcc.Store(id='store-medico-acao'),
     dcc.Store(id='store-codmed-delete'),
+    dcc.Store(id='store-refresh-trigger-med', data=0),
     html.Div(id="alert-medico")
 ], fluid=True)
 
@@ -98,10 +99,9 @@ layout = dbc.Container([
     Output("tabela-medicos", "children"),
     Output("media-consultas-medico", "children"),
     Input("filtro-medico", "value"),
-    Input("btn-salvar-medico", "n_clicks"),
-    Input("btn-confirmar-delete-med", "n_clicks")
+    Input("store-refresh-trigger-med", "data")
 )
-def atualizar_tabela(filtro, save_clicks, del_clicks):
+def atualizar_tabela(filtro, refresh_trigger):
     if not db.ensure_connected():
         return dbc.Alert("Sem conexão com o banco de dados. Verifique o arquivo .env e o serviço MySQL.", color="danger"), "Nenhuma consulta registrada"
 
@@ -207,6 +207,8 @@ def toggle_modal(novo_click, edit_clicks, fechar_click, edit_ids):
 
 @callback(
     Output("alert-medico", "children"),
+    Output("modal-medico", "is_open", allow_duplicate=True),
+    Output("store-refresh-trigger-med", "data"),
     Input("btn-salvar-medico", "n_clicks"),
     State("store-medico-acao", "data"),
     State("input-codmed", "value"),
@@ -215,35 +217,39 @@ def toggle_modal(novo_click, edit_clicks, fechar_click, edit_ids):
     State("input-genero-med", "value"),
     State("input-tel-med", "value"),
     State("input-email-med", "value"),
+    State("store-refresh-trigger-med", "data"),
     prevent_initial_call=True
 )
-def salvar_medico(n_clicks, acao, cod, nome, espec, genero, tel, email):
+def salvar_medico(n_clicks, acao, cod, nome, espec, genero, tel, email, current_trigger):
     if not cod or not nome or not espec:
-        return dbc.Alert("Código, Nome e Especialidade são obrigatórios!", color="danger", duration=3000)
+        return dbc.Alert("Código, Nome e Especialidade são obrigatórios!", color="danger", duration=3000), True, current_trigger or 0
     
     if len(cod) != 7:
-        return dbc.Alert("Código deve ter 7 dígitos!", color="danger", duration=3000)
+        return dbc.Alert("Código deve ter 7 dígitos!", color="danger", duration=3000), True, current_trigger or 0
     
-    if acao == "create":
-        query = """
-        INSERT INTO tabelamedico (CodMed, NomeMed, Genero, Telefone, Email, Especialidade)
-        VALUES (%s, %s, %s, %s, %s, %s)
-        """
-        params = (cod, nome, genero or None, tel or None, email or None, espec)
-    else:
-        query = """
-        UPDATE tabelamedico 
-        SET NomeMed=%s, Genero=%s, Telefone=%s, Email=%s, Especialidade=%s
-        WHERE CodMed=%s
-        """
-        params = (nome, genero or None, tel or None, email or None, espec, cod)
-    
-    success, msg = db.execute_query(query, params)
-    
-    if success:
-        return dbc.Alert("Médico salvo com sucesso!", color="success", duration=3000)
-    else:
-        return dbc.Alert(f"Erro: {msg}", color="danger", duration=5000)
+    try:
+        if acao == "create":
+            query = """
+            INSERT INTO tabelamedico (CodMed, NomeMed, Genero, Telefone, Email, Especialidade)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            params = (cod, nome, genero or None, tel or None, email or None, espec)
+        else:
+            query = """
+            UPDATE tabelamedico 
+            SET NomeMed=%s, Genero=%s, Telefone=%s, Email=%s, Especialidade=%s
+            WHERE CodMed=%s
+            """
+            params = (nome, genero or None, tel or None, email or None, espec, cod)
+        
+        success, msg = db.execute_query(query, params)
+        
+        if success:
+            return dbc.Alert("Médico salvo com sucesso!", color="success", duration=3000), False, (current_trigger or 0) + 1
+        else:
+            return dbc.Alert(f"Erro: {msg}", color="danger", duration=5000), True, current_trigger or 0
+    except Exception as e:
+        return dbc.Alert(f"Erro inesperado: {str(e)}", color="danger", duration=5000), True, current_trigger or 0
 
 @callback(
     Output("modal-delete-medico", "is_open"),
@@ -274,17 +280,20 @@ def toggle_delete_modal(delete_clicks, confirm_click, cancel_click, delete_ids):
 
 @callback(
     Output("alert-medico", "children", allow_duplicate=True),
+    Output("modal-delete-medico", "is_open", allow_duplicate=True),
+    Output("store-refresh-trigger-med", "data", allow_duplicate=True),
     Input("btn-confirmar-delete-med", "n_clicks"),
     State("store-codmed-delete", "data"),
+    State("store-refresh-trigger-med", "data"),
     prevent_initial_call=True
 )
-def deletar_medico(n_clicks, cod):
+def deletar_medico(n_clicks, cod, current_trigger):
     if cod:
         success, msg = db.execute_query("DELETE FROM tabelamedico WHERE CodMed = %s", (cod,))
         
         if success:
-            return dbc.Alert("Médico excluído com sucesso!", color="success", duration=3000)
+            return dbc.Alert("Médico excluído com sucesso!", color="success", duration=3000), False, (current_trigger or 0) + 1
         else:
-            return dbc.Alert(f"Erro ao excluir: {msg}", color="danger", duration=5000)
+            return dbc.Alert(f"Erro ao excluir: {msg}", color="danger", duration=5000), True, current_trigger or 0
     
-    return None
+    return None, False, current_trigger or 0
