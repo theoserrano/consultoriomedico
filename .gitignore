@@ -3,6 +3,10 @@
 # Arquivo de configuração com credenciais sensíveis
 .env
 
+# Credenciais Firebase (sensível)
+firebase-credentials.json
+*-firebase-adminsdk-*.json
+
 # Cache Python
 __pycache__/
 *.py[cod]

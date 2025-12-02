@@ -6,6 +6,13 @@ from dash.dependencies import Input, Output
 from pages import home, pacientes, medicos, clinicas, consultas, analytics
 from dash import html
 
+# Importa página NoSQL (opcional - não quebra se não tiver Firebase configurado)
+try:
+    from pages import nosql_demo
+    NOSQL_ENABLED = True
+except Exception:
+    NOSQL_ENABLED = False
+
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP, dbc.icons.BOOTSTRAP], suppress_callback_exceptions=True)
 
 # Registra callbacks das páginas
@@ -18,6 +25,13 @@ try:
     analytics.register_callbacks(app)
 except Exception:
     pass
+
+# Registra callbacks da página NoSQL (se disponível)
+if NOSQL_ENABLED:
+    try:
+        nosql_demo.register_callbacks(app)
+    except Exception:
+        pass
 
 navbar = dbc.Navbar(
     dbc.Container([
@@ -38,7 +52,8 @@ navbar = dbc.Navbar(
                     dbc.NavItem(dbc.NavLink([html.I(className="bi bi-building-fill me-1"), "Clínicas"], href="/clinicas", className="px-3")),
                     dbc.NavItem(dbc.NavLink([html.I(className="bi bi-calendar-check-fill me-1"), "Consultas"], href="/consultas", className="px-3")),
                     dbc.NavItem(dbc.NavLink([html.I(className="bi bi-bar-chart-fill me-1"), "Analytics"], href="/analytics", className="px-3")),
-                ], navbar=True, className="ms-auto")
+                ] + ([dbc.NavItem(dbc.NavLink([html.I(className="bi bi-fire me-1"), "NoSQL Demo"], href="/nosql", className="px-3 text-warning"))] if NOSQL_ENABLED else []), 
+                navbar=True, className="ms-auto")
             ])
         ], className="flex-grow-1")
     ], fluid=True),
@@ -67,6 +82,8 @@ def display_page(pathname):
         return consultas.layout
     elif pathname == '/analytics':
         return analytics.layout
+    elif pathname == '/nosql' and NOSQL_ENABLED:
+        return nosql_demo.layout
     else:
         # home provides a build_layout() function which checks DB connectivity
         try:
