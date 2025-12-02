@@ -42,9 +42,10 @@ def build_layout():
                             options=[{'label': 'Todas', 'value': ''}],
                             value='',
                             clearable=False,
-                            className='analytics-dropdown'
+                            className='analytics-dropdown',
+                            style={'zIndex': 'auto'}
                         )
-                    ], md=3),
+                    ], md=3, style={'zIndex': 1050, 'position': 'relative'}),
                     dbc.Col([
                         dbc.Label("Médico"),
                         dcc.Dropdown(
@@ -52,9 +53,10 @@ def build_layout():
                             options=[{'label': 'Todos', 'value': ''}],
                             value='',
                             clearable=False,
-                            className='analytics-dropdown'
+                            className='analytics-dropdown',
+                            style={'zIndex': 'auto'}
                         )
-                    ], md=3),
+                    ], md=3, style={'zIndex': 1050, 'position': 'relative'}),
                     dbc.Col([
                         dbc.Label("Período"),
                         dcc.DatePickerRange(
@@ -62,16 +64,17 @@ def build_layout():
                             start_date=None,
                             end_date=None,
                             display_format='DD/MM/YYYY',
-                            className="w-100"
+                            className="w-100",
+                            style={'zIndex': 10000}
                         )
-                    ], md=4),
+                    ], md=4, style={'zIndex': 1050, 'position': 'relative'}),
                     dbc.Col([
                         dbc.Label("⠀"),
                         dbc.Button("Aplicar Filtros", id="analytics-btn-apply", color="primary", className="w-100")
                     ], md=2),
                 ], className="g-2")
             ])
-        ], className="mb-4 shadow-sm border-0"),
+        ], className="mb-4 shadow-sm border-0", style={'zIndex': 1050, 'position': 'relative'}),
 
         # Gráficos
         dbc.Row([
@@ -81,7 +84,7 @@ def build_layout():
                     dbc.CardBody([
                         dcc.Graph(id='analytics-graph-timeseries', config={'displayModeBar': True})
                     ])
-                ], className="shadow-sm border-0")
+                ], className="shadow-sm border-0", style={'zIndex': 1, 'position': 'relative'})
             ], md=12),
         ], className="mb-3"),
 
@@ -92,7 +95,7 @@ def build_layout():
                     dbc.CardBody([
                         dcc.Graph(id='analytics-graph-by-medico', config={'displayModeBar': True})
                     ])
-                ], className="shadow-sm border-0")
+                ], className="shadow-sm border-0", style={'zIndex': 1, 'position': 'relative'})
             ], md=6),
             dbc.Col([
                 dbc.Card([
@@ -100,7 +103,7 @@ def build_layout():
                     dbc.CardBody([
                         dcc.Graph(id='analytics-graph-by-clinica', config={'displayModeBar': True})
                     ])
-                ], className="shadow-sm border-0")
+                ], className="shadow-sm border-0", style={'zIndex': 1, 'position': 'relative'})
             ], md=6),
         ], className="mb-3"),
 
@@ -111,7 +114,7 @@ def build_layout():
                     dbc.CardBody([
                         dcc.Graph(id='analytics-graph-gender', config={'displayModeBar': True})
                     ])
-                ], className="shadow-sm border-0")
+                ], className="shadow-sm border-0", style={'zIndex': 1, 'position': 'relative'})
             ], md=4),
             dbc.Col([
                 dbc.Card([
@@ -119,7 +122,7 @@ def build_layout():
                     dbc.CardBody([
                         dcc.Graph(id='analytics-graph-age-hist', config={'displayModeBar': True})
                     ])
-                ], className="shadow-sm border-0")
+                ], className="shadow-sm border-0", style={'zIndex': 1, 'position': 'relative'})
             ], md=4),
             dbc.Col([
                 dbc.Card([
@@ -127,7 +130,7 @@ def build_layout():
                     dbc.CardBody([
                         dcc.Graph(id='analytics-graph-box-age', config={'displayModeBar': True})
                     ])
-                ], className="shadow-sm border-0")
+                ], className="shadow-sm border-0", style={'zIndex': 1, 'position': 'relative'})
             ], md=4),
         ], className="mb-3"),
 
@@ -138,7 +141,7 @@ def build_layout():
                     dbc.CardBody([
                         dcc.Graph(id='analytics-graph-heatmap', config={'displayModeBar': True})
                     ])
-                ], className="shadow-sm border-0")
+                ], className="shadow-sm border-0", style={'zIndex': 1, 'position': 'relative'})
             ], md=8),
             dbc.Col([
                 dbc.Card([
@@ -146,7 +149,7 @@ def build_layout():
                     dbc.CardBody([
                         dcc.Graph(id='analytics-graph-scatter', config={'displayModeBar': True})
                     ])
-                ], className="shadow-sm border-0")
+                ], className="shadow-sm border-0", style={'zIndex': 1, 'position': 'relative'})
             ], md=4),
         ], className="mb-3"),
 

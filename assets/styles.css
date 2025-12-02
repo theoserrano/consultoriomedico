@@ -53,7 +53,7 @@ body {
     border-radius: var(--border-radius);
     box-shadow: var(--card-shadow);
     transition: var(--transition);
-    overflow: hidden;
+    overflow: visible; /* Mudado de hidden para visible */
 }
 
 .card:hover {
@@ -71,6 +71,7 @@ body {
 
 .card-body {
     padding: 1.5rem;
+    overflow: visible; /* Garantir que dropdowns não sejam cortados */
 }
 
 /* ===== BOTÕES ===== */
@@ -214,23 +215,44 @@ body {
 }
 
 /* ===== DROPDOWNS E Z-INDEX ===== */
-.Select-menu-outer {
-    z-index: 9999 !important;
+
+/* Garantir que cards não interfiram com os dropdowns */
+.card {
+    z-index: 1;
+    position: relative;
 }
 
-.dash-dropdown {
+/* Card de filtros DEVE ficar acima de outros cards */
+.card:has(.dash-dropdown), 
+.card:has(.DateRangePicker),
+.card:has(#analytics-filter-clinica),
+.card:has(#analytics-filter-medico),
+.card:has(#analytics-filter-periodo) {
     z-index: 1050 !important;
     position: relative;
 }
 
+/* Dropdown do Dash - Select menu */
+.Select-menu-outer {
+    z-index: 10000 !important;
+    position: absolute !important;
+}
+
+.dash-dropdown {
+    position: relative;
+    z-index: auto;
+}
+
 .dash-dropdown .Select-menu-outer {
-    z-index: 9999 !important;
+    z-index: 10000 !important;
     max-height: 400px !important;
     overflow-y: auto !important;
+    position: absolute !important;
 }
 
 .Select-menu {
     max-height: 400px !important;
+    z-index: 10000 !important;
 }
 
 .Select-option {
@@ -242,9 +264,16 @@ body {
 }
 
 /* Analytics Dropdown específico */
+.analytics-dropdown {
+    position: relative;
+    z-index: auto;
+}
+
 .analytics-dropdown .Select-menu-outer {
     max-height: 400px !important;
     overflow-y: auto !important;
+    z-index: 10000 !important;
+    position: absolute !important;
 }
 
 .analytics-dropdown .Select-option {
@@ -252,30 +281,80 @@ body {
     font-size: 15px !important;
 }
 
-/* DatePickerRange */
+/* DatePickerRange - Componentes do React-Dates */
+.DateInput {
+    position: relative;
+    z-index: auto;
+}
+
 .DateInput_input {
-    z-index: 1050 !important;
+    z-index: auto !important;
+    position: relative;
 }
 
 .DateRangePicker {
-    z-index: 1050 !important;
+    position: relative;
+    z-index: auto;
 }
 
 .DateRangePicker_picker {
-    z-index: 9999 !important;
+    z-index: 10000 !important;
+    position: absolute !important;
 }
 
-/* Garantir que dropdowns fiquem acima de cards */
-.card {
-    z-index: 1;
-    position: relative;
+.CalendarDay__selected,
+.CalendarDay__selected:active,
+.CalendarDay__selected:hover {
+    background: var(--primary-color) !important;
+    border: 1px double var(--primary-color) !important;
 }
 
-/* Card de filtros deve ter z-index maior */
-.card:has(.dash-dropdown), 
-.card:has(.DateRangePicker) {
-    z-index: 1040;
-    position: relative;
+.DayPickerNavigation_button {
+    z-index: 10001 !important;
+}
+
+/* Portal do DatePicker - garantir que fique sempre acima */
+.SingleDatePickerInput,
+.DateRangePickerInput {
+    background-color: white;
+}
+
+/* Overlay e portals do React */
+.react-portal,
+[data-testid="calendar"],
+[role="dialog"] {
+    z-index: 10000 !important;
+}
+
+/* Container de gráficos DEVE ficar abaixo dos modais */
+.js-plotly-plot,
+.plotly,
+.plotly-graph-div {
+    z-index: 1 !important;
+    position: relative !important;
+}
+
+/* Modebar dos gráficos */
+.modebar {
+    z-index: 10 !important;
+}
+
+/* SVG dos gráficos do Plotly */
+.main-svg {
+    z-index: 1 !important;
+}
+
+/* Garantir que TODOS os cards com gráficos fiquem abaixo */
+.card:has(.js-plotly-plot),
+.card:has(#analytics-graph-timeseries),
+.card:has(#analytics-graph-by-medico),
+.card:has(#analytics-graph-by-clinica),
+.card:has(#analytics-graph-gender),
+.card:has(#analytics-graph-heatmap),
+.card:has(#analytics-graph-age-hist),
+.card:has(#analytics-graph-box-age),
+.card:has(#analytics-graph-scatter) {
+    z-index: 1 !important;
 }
 
 /* ===== ANIMAÇÕES ===== */
@@ -344,3 +423,69 @@ body {
         font-size: 0.85rem;
     }
 }
+
+/* ===== CONTAINERS E OVERFLOW ===== */
+/* Garantir que containers não cortem dropdowns e calendários */
+.container,
+.container-fluid {
+    overflow: visible !important;
+}
+
+.row {
+    overflow: visible !important;
+}
+
+.col,
+[class*="col-"] {
+    overflow: visible !important;
+}
+
+/* Garantir que o body também não corte */
+body {
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+/* ===== Z-INDEX HIERARQUIA GLOBAL ===== */
+/* Definir ordem clara de empilhamento */
+
+/* Nível 1: Gráficos e conteúdo normal */
+.card:not(:has(.dash-dropdown)):not(:has(.DateRangePicker)) {
+    z-index: 1 !important;
+}
+
+/* Nível 2: Card de filtros */
+.card:has(.dash-dropdown),
+.card:has(.DateRangePicker) {
+    z-index: 1050 !important;
+}
+
+/* Nível 3: Menus dropdown e calendários */
+.Select-menu-outer,
+.DateRangePicker_picker,
+.react-portal {
+    z-index: 10000 !important;
+}
+
+/* Forçar todos os elementos Plotly para baixo */
+div[id^="analytics-graph"] {
+    z-index: 1 !important;
+}
+
+div[id^="analytics-graph"] .js-plotly-plot {
+    z-index: 1 !important;
+}
+
+div[id^="analytics-graph"] .plotly {
+    z-index: 1 !important;
+}
+
+div[id^="analytics-graph"] .main-svg {
+    z-index: 1 !important;
+}
+
+/* Garantir que tooltips do Plotly não interfiram */
+.plotly .hoverlayer {
+    z-index: 5 !important;
+}
+
