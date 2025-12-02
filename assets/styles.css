@@ -219,16 +219,62 @@ body {
 }
 
 .dash-dropdown {
-    z-index: 1000;
+    z-index: 1050 !important;
+    position: relative;
 }
 
 .dash-dropdown .Select-menu-outer {
+    z-index: 9999 !important;
+    max-height: 400px !important;
+    overflow-y: auto !important;
+}
+
+.Select-menu {
+    max-height: 400px !important;
+}
+
+.Select-option {
+    padding: 12px 16px !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    line-height: 1.4 !important;
+    min-height: 50px !important;
+}
+
+/* Analytics Dropdown específico */
+.analytics-dropdown .Select-menu-outer {
+    max-height: 400px !important;
+    overflow-y: auto !important;
+}
+
+.analytics-dropdown .Select-option {
+    padding: 14px 18px !important;
+    font-size: 15px !important;
+}
+
+/* DatePickerRange */
+.DateInput_input {
+    z-index: 1050 !important;
+}
+
+.DateRangePicker {
+    z-index: 1050 !important;
+}
+
+.DateRangePicker_picker {
     z-index: 9999 !important;
 }
 
 /* Garantir que dropdowns fiquem acima de cards */
 .card {
     z-index: 1;
+    position: relative;
+}
+
+/* Card de filtros deve ter z-index maior */
+.card:has(.dash-dropdown), 
+.card:has(.DateRangePicker) {
+    z-index: 1040;
     position: relative;
 }
 

@@ -41,7 +41,8 @@ def build_layout():
                             id='analytics-filter-clinica',
                             options=[{'label': 'Todas', 'value': ''}],
                             value='',
-                            clearable=False
+                            clearable=False,
+                            className='analytics-dropdown'
                         )
                     ], md=3),
                     dbc.Col([
@@ -50,7 +51,8 @@ def build_layout():
                             id='analytics-filter-medico',
                             options=[{'label': 'Todos', 'value': ''}],
                             value='',
-                            clearable=False
+                            clearable=False,
+                            className='analytics-dropdown'
                         )
                     ], md=3),
                     dbc.Col([

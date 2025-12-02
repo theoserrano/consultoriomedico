@@ -29,7 +29,14 @@ class Database:
                 port=Config.DB_PORT,
                 user=Config.DB_USER,
                 password=Config.DB_PASSWORD,
-                database=Config.DB_NAME
+                database=Config.DB_NAME,
+                pool_name='consultorio_pool',
+                pool_size=5,
+                pool_reset_session=True,
+                autocommit=True,
+                connect_timeout=10,
+                use_pure=True,
+                ssl_disabled=True  # Desabilita SSL para localhost
             )
             logger.info(f"Conectado ao banco {Config.DB_NAME}@{Config.DB_HOST}:{Config.DB_PORT} como {Config.DB_USER}")
             return self.connection
@@ -135,11 +142,17 @@ class Database:
                 return True
 
             if self.connection and getattr(self.connection, 'is_connected', lambda: False)():
-                return True
+                # Testa a conexão com ping
+                try:
+                    self.connection.ping(reconnect=True, attempts=3, delay=1)
+                    return True
+                except:
+                    pass
         except Exception:
             pass
 
         # tentar reconectar
+        logger.info("Reconectando ao banco...")
         conn = self.connect()
         ok = False
         if self.use_sqlite:
@@ -148,7 +161,7 @@ class Database:
             ok = conn is not None and getattr(conn, 'is_connected', lambda: False)()
 
         if ok:
-            logger.info("Conexão disponível")
+            logger.info("Conexão restabelecida")
         else:
             logger.warning("Falha ao obter conexão com o banco")
         return ok

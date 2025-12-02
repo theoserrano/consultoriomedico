@@ -12,7 +12,7 @@ layout = dbc.Container([
     
     dbc.Row([
         dbc.Col([
-            dbc.Button("\u2795 Nova Consulta", id="btn-nova-consulta", color="warning", className="mb-3")
+            dbc.Button("➕ Nova Consulta", id="btn-nova-consulta", color="warning", className="mb-3")
         ])
     ]),
     
@@ -26,7 +26,7 @@ layout = dbc.Container([
             dbc.Input(id="filtro-data-fim", type="date", className="mb-2")
         ], md=3),
         dbc.Col([
-            dbc.Label("Filtrar por M�dico:"),
+            dbc.Label("Filtrar por Médico:"),
             dcc.Dropdown(id="filtro-medico-cons", placeholder="Selecione...", className="mb-2")
         ], md=3),
         dbc.Col([
@@ -43,12 +43,12 @@ layout = dbc.Container([
             dbc.Form([
                 dbc.Row([
                     dbc.Col([
-                        dbc.Label("Cl�nica *"),
-                        dcc.Dropdown(id="input-clinica-cons", placeholder="Selecione a cl�nica")
+                        dbc.Label("Clínica *"),
+                        dcc.Dropdown(id="input-clinica-cons", placeholder="Selecione a clínica")
                     ], md=4),
                     dbc.Col([
-                        dbc.Label("M�dico *"),
-                        dcc.Dropdown(id="input-medico-cons", placeholder="Selecione o m�dico")
+                        dbc.Label("Médico *"),
+                        dcc.Dropdown(id="input-medico-cons", placeholder="Selecione o médico")
                     ], md=4),
                     dbc.Col([
                         dbc.Label("Paciente *"),
@@ -75,7 +75,7 @@ layout = dbc.Container([
     ], id="modal-consulta", size="lg", is_open=False),
     
     dbc.Modal([
-        dbc.ModalHeader(dbc.ModalTitle("Confirmar Exclus�o")),
+        dbc.ModalHeader(dbc.ModalTitle("Confirmar Exclusão")),
         dbc.ModalBody("Tem certeza que deseja excluir esta consulta?"),
         dbc.ModalFooter([
             dbc.Button("Confirmar", id="btn-confirmar-delete-cons", color="danger"),
@@ -140,8 +140,8 @@ def atualizar_tabela(apply_click, save_click, del_click, data_ini, data_fim, med
     df = pd.DataFrame(consultas)
     
     table_header = [html.Thead(html.Tr([
-        html.Th("Data/Hora"), html.Th("Paciente"), html.Th("M�dico"),
-        html.Th("Cl�nica"), html.Th("A��es")
+        html.Th("Data/Hora"), html.Th("Paciente"), html.Th("Médico"),
+        html.Th("Clínica"), html.Th("Ações")
     ]))]
     
     rows = []
@@ -220,7 +220,7 @@ def toggle_modal(novo_click, fechar_click):
 )
 def salvar_consulta(n_clicks, cli, med, pac, data, hora):
     if not all([cli, med, pac, data, hora]):
-        return dbc.Alert("Todos os campos s�o obrigat�rios!", color="danger", duration=3000)
+        return dbc.Alert("Todos os campos são obrigatórios!", color="danger", duration=3000)
     
     data_hora = f"{data} {hora}:00"
     
@@ -235,8 +235,8 @@ def salvar_consulta(n_clicks, cli, med, pac, data, hora):
     if success:
         return dbc.Alert("Consulta agendada com sucesso! (Trigger de auditoria ativado)", color="success", duration=3000)
     else:
-        if "Duplicate entry" in msg or "j� existe" in msg:
-            return dbc.Alert("Erro: J� existe uma consulta agendada neste hor�rio para este m�dico! (Trigger impediu duplica��o)", color="danger", duration=5000)
+        if "Duplicate entry" in msg or "já existe" in msg:
+            return dbc.Alert("Erro: Já existe uma consulta agendada neste horário para este médico! (Trigger impediu duplicação)", color="danger", duration=5000)
         return dbc.Alert(f"Erro: {msg}", color="danger", duration=5000)
 
 @callback(
@@ -285,7 +285,7 @@ def deletar_consulta(n_clicks, dados):
             success, msg = db.execute_query(query, (cli, med, pac, data_hora))
             
             if success:
-                return dbc.Alert("Consulta exclu�da com sucesso! (Trigger de auditoria ativado)", color="success", duration=3000)
+                return dbc.Alert("Consulta excluída com sucesso! (Trigger de auditoria ativado)", color="success", duration=3000)
             else:
                 return dbc.Alert(f"Erro ao excluir: {msg}", color="danger", duration=5000)
     

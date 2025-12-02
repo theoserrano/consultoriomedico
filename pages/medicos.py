@@ -7,11 +7,11 @@ from db import db
 import json
 
 layout = dbc.Container([
-    html.H2("Gerenciamento de M�dicos", className="mb-4"),
+    html.H2("Gerenciamento de Médicos", className="mb-4"),
     
     dbc.Row([
         dbc.Col([
-            dbc.Button("\u2795 Novo M�dico", id="btn-novo-medico", color="success", className="mb-3")
+            dbc.Button("➕ Novo Médico", id="btn-novo-medico", color="success", className="mb-3")
         ])
     ]),
     
@@ -27,7 +27,7 @@ layout = dbc.Container([
     dbc.Row([
         dbc.Col([
             dbc.Card([
-                dbc.CardHeader(html.H5("M�dia de Consultas por M�dico")),
+                dbc.CardHeader(html.H5("Média de Consultas por Médico")),
                 dbc.CardBody(id="media-consultas-medico")
             ], className="mt-4")
         ])
@@ -39,8 +39,8 @@ layout = dbc.Container([
             dbc.Form([
                 dbc.Row([
                     dbc.Col([
-                        dbc.Label("C�digo M�dico *"),
-                        dbc.Input(id="input-codmed", placeholder="7 d�gitos", maxLength=7, required=True)
+                        dbc.Label("Código Médico *"),
+                        dbc.Input(id="input-codmed", placeholder="7 dígitos", maxLength=7, required=True)
                     ], md=6),
                     dbc.Col([
                         dbc.Label("Nome Completo *"),
@@ -54,7 +54,7 @@ layout = dbc.Container([
                         dbc.Input(id="input-especialidade", placeholder="Ex: Cardiologia", required=True)
                     ], md=6),
                     dbc.Col([
-                        dbc.Label("G�nero"),
+                        dbc.Label("Gênero"),
                         dbc.Select(id="input-genero-med", options=[
                             {"label": "Masculino", "value": "M"},
                             {"label": "Feminino", "value": "F"}
@@ -81,8 +81,8 @@ layout = dbc.Container([
     ], id="modal-medico", size="lg", is_open=False),
     
     dbc.Modal([
-        dbc.ModalHeader(dbc.ModalTitle("Confirmar Exclus�o")),
-        dbc.ModalBody("Tem certeza que deseja excluir este m�dico?"),
+        dbc.ModalHeader(dbc.ModalTitle("Confirmar Exclusão")),
+        dbc.ModalBody("Tem certeza que deseja excluir este médico?"),
         dbc.ModalFooter([
             dbc.Button("Confirmar", id="btn-confirmar-delete-med", color="danger"),
             dbc.Button("Cancelar", id="btn-cancelar-delete-med", color="secondary")
@@ -114,7 +114,7 @@ def atualizar_tabela(filtro, save_clicks, del_clicks):
     
     medicos = db.fetch_all(query, params)
     
-    # Consulta n�o trivial: m�dia de consultas por m�dico
+    # Consulta não trivial: média de consultas por médico
     query_media = """
     SELECT 
         AVG(total) as media_consultas
@@ -125,7 +125,7 @@ def atualizar_tabela(filtro, save_clicks, del_clicks):
     ) as subconsulta
     """
     media_result = db.fetch_one(query_media)
-    media_txt = f"M�dia: {media_result['media_consultas']:.2f} consultas por m�dico" if media_result and media_result['media_consultas'] else "Nenhuma consulta registrada"
+    media_txt = f"Média: {media_result['media_consultas']:.2f} consultas por médico" if media_result and media_result['media_consultas'] else "Nenhuma consulta registrada"
     
     if not medicos:
         return dbc.Alert("Nenhum m�dico encontrado", color="info"), media_txt
@@ -133,8 +133,8 @@ def atualizar_tabela(filtro, save_clicks, del_clicks):
     df = pd.DataFrame(medicos)
     
     table_header = [html.Thead(html.Tr([
-        html.Th("C�digo"), html.Th("Nome"), html.Th("Especialidade"),
-        html.Th("G�nero"), html.Th("Telefone"), html.Th("Email"), html.Th("A��es")
+        html.Th("Código"), html.Th("Nome"), html.Th("Especialidade"),
+        html.Th("Gênero"), html.Th("Telefone"), html.Th("Email"), html.Th("Ações")
     ]))]
     
     rows = []
@@ -187,7 +187,7 @@ def toggle_modal(novo_click, edit_clicks, fechar_click, edit_ids):
     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
     
     if "btn-novo-medico" in trigger_id:
-        return True, "Novo M�dico", "create", "", False, "", "", "", "", ""
+        return True, "Novo Médico", "create", "", False, "", "", "", "", ""
     
     if "btn-fechar-modal-medico" in trigger_id:
         return False, "", None, "", False, "", "", "", "", ""
@@ -199,7 +199,7 @@ def toggle_modal(novo_click, edit_clicks, fechar_click, edit_ids):
         medico = db.fetch_one("SELECT * FROM tabelamedico WHERE CodMed = %s", (cod,))
         
         if medico:
-            return (True, "Editar M�dico", "update", cod, True,
+            return (True, "Editar Médico", "update", cod, True,
                    medico['NomeMed'], medico['Especialidade'],
                    medico['Genero'], medico['Telefone'], medico['Email'])
     
@@ -219,10 +219,10 @@ def toggle_modal(novo_click, edit_clicks, fechar_click, edit_ids):
 )
 def salvar_medico(n_clicks, acao, cod, nome, espec, genero, tel, email):
     if not cod or not nome or not espec:
-        return dbc.Alert("C�digo, Nome e Especialidade s�o obrigat�rios!", color="danger", duration=3000)
+        return dbc.Alert("Código, Nome e Especialidade são obrigatórios!", color="danger", duration=3000)
     
     if len(cod) != 7:
-        return dbc.Alert("C�digo deve ter 7 d�gitos!", color="danger", duration=3000)
+        return dbc.Alert("Código deve ter 7 dígitos!", color="danger", duration=3000)
     
     if acao == "create":
         query = """
@@ -241,7 +241,7 @@ def salvar_medico(n_clicks, acao, cod, nome, espec, genero, tel, email):
     success, msg = db.execute_query(query, params)
     
     if success:
-        return dbc.Alert("M�dico salvo com sucesso!", color="success", duration=3000)
+        return dbc.Alert("Médico salvo com sucesso!", color="success", duration=3000)
     else:
         return dbc.Alert(f"Erro: {msg}", color="danger", duration=5000)
 
@@ -283,7 +283,7 @@ def deletar_medico(n_clicks, cod):
         success, msg = db.execute_query("DELETE FROM tabelamedico WHERE CodMed = %s", (cod,))
         
         if success:
-            return dbc.Alert("M�dico exclu�do com sucesso!", color="success", duration=3000)
+            return dbc.Alert("Médico excluído com sucesso!", color="success", duration=3000)
         else:
             return dbc.Alert(f"Erro ao excluir: {msg}", color="danger", duration=5000)
     
