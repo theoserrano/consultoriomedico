@@ -1,0 +1,5 @@
+# Dependências para integração com Firebase/Firestore
+# Instalar com: pip install -r requirements_nosql.txt
+
+firebase-admin==6.5.0
+google-cloud-firestore==2.16.0
