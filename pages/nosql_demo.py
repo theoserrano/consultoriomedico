@@ -4,7 +4,7 @@ Página de demonstração NoSQL (Firebase/Firestore)
 Mostra comparação lado a lado: MySQL vs Firebase
 """
 
-from dash import html, dcc, callback, Input, Output
+from dash import html, dcc, callback, Input, Output, State
 import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
 
@@ -291,7 +291,14 @@ def build_layout():
                                             "Iniciar Migração"
                                         ], id="btn-migrate", color="primary", size="lg", className="mt-3"),
                                         
-                                        html.Div(id="migration-result", className="mt-4")
+                                        # Progress indicator
+                                        html.Div(id="migration-progress", className="mt-4"),
+                                        
+                                        html.Div(id="migration-result", className="mt-4"),
+                                        
+                                        # Store e Interval para progresso
+                                        dcc.Store(id="migration-store", data={"status": "idle"}),
+                                        dcc.Interval(id="migration-interval", interval=500, disabled=True)
                                     ])
                                 ])
                             ])
@@ -660,117 +667,204 @@ def register_callbacks(app):
         return ""
     
     @callback(
-        Output("migration-result", "children"),
+        Output("migration-interval", "disabled"),
+        Output("migration-store", "data"),
+        Output("btn-migrate", "disabled"),
         Input("btn-migrate", "n_clicks"),
         prevent_initial_call=True
     )
-    def start_migration(n_clicks):
-        """Inicia o processo de migração de dados"""
+    def start_migration_process(n_clicks):
+        """Inicia o processo de migração em background"""
         if not n_clicks:
-            return ""
+            return True, {"status": "idle"}, False
         
         try:
-            # Importar módulos necessários
+            import threading
             from nosql.migration import MySQLToFirestoreMigration
             from db import db as mysql_db
             from nosql.db_nosql import firebase_db
             
             # Verificar conexões
             if not mysql_db.ensure_connected():
-                return dbc.Alert([
-                    html.I(className="bi bi-exclamation-triangle-fill me-2"),
-                    "Erro: Não foi possível conectar ao MySQL"
-                ], color="danger")
+                return True, {"status": "error", "message": "MySQL não conectado"}, False
             
             if not firebase_db.connect():
-                return dbc.Alert([
-                    html.I(className="bi bi-exclamation-triangle-fill me-2"),
-                    "Erro: Não foi possível conectar ao Firebase"
-                ], color="danger")
+                return True, {"status": "error", "message": "Firebase não conectado"}, False
             
-            # Criar instância de migração
-            migration = MySQLToFirestoreMigration()
+            # Iniciar migração em thread separada
+            def run_migration():
+                migration = MySQLToFirestoreMigration()
+                migration.migrar_tudo(limite_consultas=100)
             
-            # Executar migração
-            sucesso = migration.migrar_tudo(limite_consultas=100)
+            thread = threading.Thread(target=run_migration, daemon=True)
+            thread.start()
             
-            # Preparar resultado
-            stats = migration.stats
+            # Ativar interval para monitorar progresso
+            return False, {"status": "running"}, True
             
-            if sucesso:
-                return dbc.Alert([
+        except Exception as e:
+            return True, {"status": "error", "message": str(e)}, False
+    
+    @callback(
+        Output("migration-progress", "children"),
+        Output("migration-result", "children"),
+        Output("migration-interval", "disabled", allow_duplicate=True),
+        Output("btn-migrate", "disabled", allow_duplicate=True),
+        Input("migration-interval", "n_intervals"),
+        State("migration-store", "data"),
+        prevent_initial_call=True
+    )
+    def update_migration_progress(n_intervals, store_data):
+        """Atualiza o progresso da migração em tempo real"""
+        if not store_data or store_data.get('status') == 'idle':
+            return "", "", True, False
+        
+        if store_data.get('status') == 'error':
+            error_msg = dbc.Alert([
+                html.I(className="bi bi-x-circle-fill me-2"),
+                store_data.get('message', 'Erro desconhecido')
+            ], color="danger")
+            return "", error_msg, True, False
+        
+        try:
+            from nosql.migration import MySQLToFirestoreMigration
+            progress = MySQLToFirestoreMigration.get_progress()
+            
+            status = progress.get('status', 'running')
+            
+            # Se concluído, mostrar resultado final
+            if status in ['completed', 'completed_with_errors']:
+                pacientes = progress['pacientes']
+                medicos = progress['medicos']
+                clinicas = progress['clinicas']
+                consultas = progress['consultas']
+                
+                sucesso = status == 'completed'
+                
+                result = dbc.Alert([
                     html.H5([
-                        html.I(className="bi bi-check-circle-fill me-2"),
-                        "Migração Concluída com Sucesso!"
+                        html.I(className="bi bi-check-circle-fill me-2" if sucesso else "bi bi-exclamation-triangle-fill me-2"),
+                        "Migração Concluída com Sucesso!" if sucesso else "Migração Concluída com Alguns Erros"
                     ], className="alert-heading mb-3"),
                     html.Hr(),
                     html.H6("Resumo da Migração:"),
                     dbc.ListGroup([
                         dbc.ListGroupItem([
+                            html.I(className="bi bi-person-fill me-2 text-primary"),
                             html.Strong("Pacientes: "),
-                            f"{stats['pacientes']['migrados']} migrados, {stats['pacientes']['erros']} erros"
+                            f"{pacientes['migrados']}/{pacientes['total']} migrados, {pacientes['erros']} erros"
                         ]),
                         dbc.ListGroupItem([
+                            html.I(className="bi bi-heart-pulse-fill me-2 text-success"),
                             html.Strong("Médicos: "),
-                            f"{stats['medicos']['migrados']} migrados, {stats['medicos']['erros']} erros"
+                            f"{medicos['migrados']}/{medicos['total']} migrados, {medicos['erros']} erros"
                         ]),
                         dbc.ListGroupItem([
+                            html.I(className="bi bi-hospital-fill me-2 text-info"),
                             html.Strong("Clínicas: "),
-                            f"{stats['clinicas']['migrados']} migrados, {stats['clinicas']['erros']} erros"
+                            f"{clinicas['migrados']}/{clinicas['total']} migrados, {clinicas['erros']} erros"
                         ]),
                         dbc.ListGroupItem([
+                            html.I(className="bi bi-calendar-check-fill me-2 text-warning"),
                             html.Strong("Consultas: "),
-                            f"{stats['consultas']['migrados']} migrados, {stats['consultas']['erros']} erros"
-                        ])
-                    ], flush=True, className="mt-3")
-                ], color="success")
-            else:
-                return dbc.Alert([
-                    html.H5([
-                        html.I(className="bi bi-exclamation-triangle-fill me-2"),
-                        "Migração Concluída com Alguns Erros"
-                    ], className="alert-heading mb-3"),
-                    html.Hr(),
-                    html.H6("Resumo da Migração:"),
-                    dbc.ListGroup([
-                        dbc.ListGroupItem([
-                            html.Strong("Pacientes: "),
-                            f"{stats['pacientes']['migrados']} migrados, {stats['pacientes']['erros']} erros"
-                        ]),
-                        dbc.ListGroupItem([
-                            html.Strong("Médicos: "),
-                            f"{stats['medicos']['migrados']} migrados, {stats['medicos']['erros']} erros"
-                        ]),
-                        dbc.ListGroupItem([
-                            html.Strong("Clínicas: "),
-                            f"{stats['clinicas']['migrados']} migrados, {stats['clinicas']['erros']} erros"
-                        ]),
-                        dbc.ListGroupItem([
-                            html.Strong("Consultas: "),
-                            f"{stats['consultas']['migrados']} migrados, {stats['consultas']['erros']} erros"
+                            f"{consultas['migrados']}/{consultas['total']} migrados, {consultas['erros']} erros"
                         ])
                     ], flush=True, className="mt-3"),
                     html.Hr(),
-                    html.P("Verifique os logs para mais detalhes sobre os erros.")
-                ], color="warning")
+                    html.P([
+                        html.Strong(f"Total: {pacientes['migrados'] + medicos['migrados'] + clinicas['migrados'] + consultas['migrados']} registros migrados")
+                    ], className="mb-0")
+                ], color="success" if sucesso else "warning")
                 
-        except ImportError as e:
-            return dbc.Alert([
-                html.H5([
-                    html.I(className="bi bi-exclamation-triangle-fill me-2"),
-                    "Erro: Módulos NoSQL Não Instalados"
-                ], className="alert-heading mb-3"),
-                html.P(f"Instale as dependências: pip install -r requirements_nosql.txt"),
-                html.Hr(),
-                html.P(f"Detalhes: {str(e)}")
-            ], color="danger")
+                return "", result, True, False
+            
+            # Ainda em progresso - mostrar barra de progresso
+            current_step = progress.get('current_step', 'Processando...')
+            pacientes = progress['pacientes']
+            medicos = progress['medicos']
+            clinicas = progress['clinicas']
+            consultas = progress['consultas']
+            
+            total_migrado = pacientes['migrados'] + medicos['migrados'] + clinicas['migrados'] + consultas['migrados']
+            
+            # Calcular percentual (estimativa)
+            total_items = pacientes['total'] + medicos['total'] + clinicas['total'] + consultas['total']
+            percentual = int((total_migrado / total_items * 100)) if total_items > 0 else 0
+            
+            progress_display = dbc.Card([
+                dbc.CardBody([
+                    html.H5([
+                        html.I(className="bi bi-hourglass-split me-2"),
+                        "Migração em Andamento..."
+                    ], className="text-primary mb-3"),
+                    
+                    html.P([
+                        html.Strong("Status: "),
+                        current_step
+                    ], className="mb-3"),
+                    
+                    dbc.Progress(
+                        value=percentual,
+                        animated=True,
+                        striped=True,
+                        color="primary",
+                        className="mb-3",
+                        style={"height": "30px"},
+                        children=html.Div(f"{percentual}%", style={"color": "white", "fontWeight": "bold"})
+                    ),
+                    
+                    html.Hr(),
+                    
+                    html.H6("Progresso por Coleção:", className="mb-3"),
+                    
+                    dbc.Row([
+                        dbc.Col([
+                            html.Div([
+                                html.I(className="bi bi-person-fill me-2 text-primary"),
+                                html.Strong("Pacientes: "),
+                                f"{pacientes['migrados']}/{pacientes['total']}" if pacientes['total'] > 0 else "Aguardando..."
+                            ], className="mb-2")
+                        ], md=6),
+                        dbc.Col([
+                            html.Div([
+                                html.I(className="bi bi-heart-pulse-fill me-2 text-success"),
+                                html.Strong("Médicos: "),
+                                f"{medicos['migrados']}/{medicos['total']}" if medicos['total'] > 0 else "Aguardando..."
+                            ], className="mb-2")
+                        ], md=6)
+                    ]),
+                    
+                    dbc.Row([
+                        dbc.Col([
+                            html.Div([
+                                html.I(className="bi bi-hospital-fill me-2 text-info"),
+                                html.Strong("Clínicas: "),
+                                f"{clinicas['migrados']}/{clinicas['total']}" if clinicas['total'] > 0 else "Aguardando..."
+                            ], className="mb-2")
+                        ], md=6),
+                        dbc.Col([
+                            html.Div([
+                                html.I(className="bi bi-calendar-check-fill me-2 text-warning"),
+                                html.Strong("Consultas: "),
+                                f"{consultas['migrados']}/{consultas['total']}" if consultas['total'] > 0 else "Aguardando..."
+                            ], className="mb-2")
+                        ], md=6)
+                    ]),
+                    
+                    html.Hr(),
+                    
+                    html.P([
+                        html.Strong(f"Total migrado: {total_migrado} registros"),
+                        html.Br(),
+                        html.Small("Aguarde enquanto os dados são transferidos...", className="text-muted")
+                    ], className="mb-0")
+                ])
+            ], className="border-primary")
+            
+            return progress_display, "", False, True
+            
         except Exception as e:
-            return dbc.Alert([
-                html.H5([
-                    html.I(className="bi bi-bug-fill me-2"),
-                    "Erro Durante a Migração"
-                ], className="alert-heading mb-3"),
-                html.P(f"Erro: {str(e)}"),
-                html.Hr(),
-                html.P("Verifique os logs para mais detalhes.")
-            ], color="danger")
+            error_alert = dbc.Alert([
+                html.I(className="bi bi-exclamation-triangle-fill me-2"),
+                f"Erro ao verificar progresso: {str(e)}"
+            ], color="warning")

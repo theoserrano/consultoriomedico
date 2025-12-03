@@ -17,12 +17,39 @@ logger = logging.getLogger(__name__)
 class MySQLToFirestoreMigration:
     """Classe para migrar dados do MySQL para Firestore"""
     
+    # Variável de classe para compartilhar progresso entre instâncias
+    _shared_progress = {
+        'status': 'idle',
+        'current_step': '',
+        'pacientes': {'total': 0, 'migrados': 0, 'erros': 0},
+        'medicos': {'total': 0, 'migrados': 0, 'erros': 0},
+        'clinicas': {'total': 0, 'migrados': 0, 'erros': 0},
+        'consultas': {'total': 0, 'migrados': 0, 'erros': 0}
+    }
+    
     def __init__(self):
         self.stats = {
             'pacientes': {'migrados': 0, 'erros': 0},
             'medicos': {'migrados': 0, 'erros': 0},
             'clinicas': {'migrados': 0, 'erros': 0},
             'consultas': {'migrados': 0, 'erros': 0}
+        }
+    
+    @classmethod
+    def get_progress(cls):
+        """Retorna o progresso atual da migração"""
+        return cls._shared_progress.copy()
+    
+    @classmethod
+    def reset_progress(cls):
+        """Reseta o progresso da migração"""
+        cls._shared_progress = {
+            'status': 'idle',
+            'current_step': '',
+            'pacientes': {'total': 0, 'migrados': 0, 'erros': 0},
+            'medicos': {'total': 0, 'migrados': 0, 'erros': 0},
+            'clinicas': {'total': 0, 'migrados': 0, 'erros': 0},
+            'consultas': {'total': 0, 'migrados': 0, 'erros': 0}
         }
     
     def migrar_pacientes(self) -> Tuple[bool, int, int]:
@@ -32,6 +59,8 @@ class MySQLToFirestoreMigration:
         Returns:
             Tuple[bool, int, int]: (sucesso, migrados, erros)
         """
+        MySQLToFirestoreMigration._shared_progress['current_step'] = 'Migrando Pacientes...'
+        MySQLToFirestoreMigration._shared_progress['status'] = 'running'
         logger.info("=== Migrando Pacientes ===")
         
         # Buscar pacientes do MySQL
@@ -41,6 +70,7 @@ class MySQLToFirestoreMigration:
             logger.warning("Nenhum paciente encontrado no MySQL")
             return True, 0, 0
         
+        MySQLToFirestoreMigration._shared_progress['pacientes']['total'] = len(pacientes)
         logger.info(f"Encontrados {len(pacientes)} pacientes no MySQL")
         
         migrados = 0
@@ -58,9 +88,11 @@ class MySQLToFirestoreMigration:
             
             if sucesso:
                 migrados += 1
+                MySQLToFirestoreMigration._shared_progress['pacientes']['migrados'] = migrados
                 logger.debug(f"✓ Paciente {cpf} migrado")
             else:
                 erros += 1
+                MySQLToFirestoreMigration._shared_progress['pacientes']['erros'] = erros
                 logger.error(f"✗ Erro ao migrar paciente {cpf}: {msg}")
         
         self.stats['pacientes']['migrados'] = migrados
@@ -71,6 +103,7 @@ class MySQLToFirestoreMigration:
     
     def migrar_medicos(self) -> Tuple[bool, int, int]:
         """Migra médicos do MySQL para Firestore"""
+        MySQLToFirestoreMigration._shared_progress['current_step'] = 'Migrando Médicos...'
         logger.info("=== Migrando Médicos ===")
         
         medicos = mysql_db.fetch_all("SELECT * FROM tabelamedico")
@@ -79,6 +112,7 @@ class MySQLToFirestoreMigration:
             logger.warning("Nenhum médico encontrado no MySQL")
             return True, 0, 0
         
+        MySQLToFirestoreMigration._shared_progress['medicos']['total'] = len(medicos)
         logger.info(f"Encontrados {len(medicos)} médicos no MySQL")
         
         migrados = 0
@@ -96,9 +130,11 @@ class MySQLToFirestoreMigration:
             
             if sucesso:
                 migrados += 1
+                MySQLToFirestoreMigration._shared_progress['medicos']['migrados'] = migrados
                 logger.debug(f"✓ Médico {codigo} migrado")
             else:
                 erros += 1
+                MySQLToFirestoreMigration._shared_progress['medicos']['erros'] = erros
                 logger.error(f"✗ Erro ao migrar médico {codigo}: {msg}")
         
         self.stats['medicos']['migrados'] = migrados
@@ -109,6 +145,7 @@ class MySQLToFirestoreMigration:
     
     def migrar_clinicas(self) -> Tuple[bool, int, int]:
         """Migra clínicas do MySQL para Firestore"""
+        MySQLToFirestoreMigration._shared_progress['current_step'] = 'Migrando Clínicas...'
         logger.info("=== Migrando Clínicas ===")
         
         clinicas = mysql_db.fetch_all("SELECT * FROM tabelaclinica")
@@ -117,6 +154,7 @@ class MySQLToFirestoreMigration:
             logger.warning("Nenhuma clínica encontrada no MySQL")
             return True, 0, 0
         
+        MySQLToFirestoreMigration._shared_progress['clinicas']['total'] = len(clinicas)
         logger.info(f"Encontradas {len(clinicas)} clínicas no MySQL")
         
         migrados = 0
@@ -133,9 +171,11 @@ class MySQLToFirestoreMigration:
             
             if sucesso:
                 migrados += 1
+                MySQLToFirestoreMigration._shared_progress['clinicas']['migrados'] = migrados
                 logger.debug(f"✓ Clínica {codigo} migrada")
             else:
                 erros += 1
+                MySQLToFirestoreMigration._shared_progress['clinicas']['erros'] = erros
                 logger.error(f"✗ Erro ao migrar clínica {codigo}: {msg}")
         
         self.stats['clinicas']['migrados'] = migrados
@@ -151,6 +191,7 @@ class MySQLToFirestoreMigration:
         Args:
             limit: Limite de consultas a migrar (None = todas)
         """
+        MySQLToFirestoreMigration._shared_progress['current_step'] = 'Migrando Consultas...'
         logger.info("=== Migrando Consultas ===")
         
         query = "SELECT * FROM tabelaconsulta ORDER BY Data_Hora DESC"
@@ -163,6 +204,7 @@ class MySQLToFirestoreMigration:
             logger.warning("Nenhuma consulta encontrada no MySQL")
             return True, 0, 0
         
+        MySQLToFirestoreMigration._shared_progress['consultas']['total'] = len(consultas)
         logger.info(f"Encontradas {len(consultas)} consultas no MySQL")
         
         migrados = 0
@@ -181,9 +223,11 @@ class MySQLToFirestoreMigration:
             
             if sucesso:
                 migrados += 1
+                MySQLToFirestoreMigration._shared_progress['consultas']['migrados'] = migrados
                 logger.debug(f"✓ Consulta migrada: {doc_id}")
             else:
                 erros += 1
+                MySQLToFirestoreMigration._shared_progress['consultas']['erros'] = erros
                 logger.error(f"✗ Erro ao migrar consulta: {msg}")
         
         self.stats['consultas']['migrados'] = migrados
@@ -202,6 +246,10 @@ class MySQLToFirestoreMigration:
         Returns:
             bool: True se tudo foi migrado com sucesso
         """
+        MySQLToFirestoreMigration.reset_progress()
+        MySQLToFirestoreMigration._shared_progress['status'] = 'running'
+        MySQLToFirestoreMigration._shared_progress['current_step'] = 'Conectando aos bancos...'
+        
         logger.info("\n" + "="*60)
         logger.info("INICIANDO MIGRAÇÃO MYSQL → FIRESTORE")
         logger.info("="*60 + "\n")
@@ -209,6 +257,7 @@ class MySQLToFirestoreMigration:
         # Conectar ao MySQL
         if not mysql_db.ensure_connected():
             logger.error("Erro: Não foi possível conectar ao MySQL")
+            MySQLToFirestoreMigration._shared_progress['status'] = 'error'
             return False
         
         logger.info("✓ MySQL conectado")
@@ -216,6 +265,7 @@ class MySQLToFirestoreMigration:
         # Conectar ao Firestore
         if not firebase_db.connect():
             logger.error("Erro: Não foi possível conectar ao Firestore")
+            MySQLToFirestoreMigration._shared_progress['status'] = 'error'
             return False
         
         logger.info("✓ Firestore conectado\n")
@@ -242,6 +292,8 @@ class MySQLToFirestoreMigration:
         sucesso_total = sucesso_total and sucesso
         
         # Resumo final
+        MySQLToFirestoreMigration._shared_progress['current_step'] = 'Concluído!'
+        MySQLToFirestoreMigration._shared_progress['status'] = 'completed' if sucesso_total else 'completed_with_errors'
         self.print_resumo()
         
         return sucesso_total
