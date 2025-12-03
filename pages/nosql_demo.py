@@ -462,6 +462,204 @@ def register_callbacks(app):
         return mysql_stats, firebase_stats, fig
     
     @callback(
+        Output("crud-result", "children"),
+        Input("btn-create", "n_clicks"),
+        Input("btn-read", "n_clicks"),
+        Input("btn-update", "n_clicks"),
+        Input("btn-delete", "n_clicks"),
+        Input("input-cpf-test", "value"),
+        Input("input-nome-test", "value"),
+        Input("input-email-test", "value"),
+        Input("input-telefone-test", "value"),
+        prevent_initial_call=True
+    )
+    def handle_crud_operations(create_clicks, read_clicks, update_clicks, delete_clicks, cpf, nome, email, telefone):
+        """Manipula operações CRUD do Firebase"""
+        from dash import callback_context
+        
+        if not callback_context.triggered:
+            return ""
+        
+        trigger_id = callback_context.triggered[0]['prop_id'].split('.')[0]
+        
+        # Ignorar mudanças nos inputs
+        if trigger_id in ['input-cpf-test', 'input-nome-test', 'input-email-test', 'input-telefone-test']:
+            return ""
+        
+        # Validação do CPF
+        if not cpf or len(cpf) != 11:
+            return dbc.Alert([
+                html.I(className="bi bi-exclamation-triangle-fill me-2"),
+                "Por favor, insira um CPF válido com 11 dígitos."
+            ], color="warning")
+        
+        try:
+            from nosql.crud_operations import crud
+            from nosql.db_nosql import firebase_db
+            
+            # Conectar ao Firebase
+            if not firebase_db.connect():
+                return dbc.Alert([
+                    html.I(className="bi bi-x-circle-fill me-2"),
+                    "Erro: Não foi possível conectar ao Firebase. Verifique a configuração."
+                ], color="danger")
+            
+            # CREATE
+            if trigger_id == "btn-create":
+                if not nome:
+                    return dbc.Alert([
+                        html.I(className="bi bi-exclamation-triangle-fill me-2"),
+                        "Nome é obrigatório para criar um paciente."
+                    ], color="warning")
+                
+                sucesso, msg = crud.criar_paciente(
+                    cpf=cpf,
+                    nome=nome,
+                    data_nascimento="2000-01-01",  # Data padrão
+                    genero="M",
+                    telefone=telefone or "",
+                    email=email or ""
+                )
+                
+                if sucesso:
+                    return dbc.Alert([
+                        html.H5([
+                            html.I(className="bi bi-check-circle-fill me-2"),
+                            "Paciente Criado!"
+                        ], className="alert-heading"),
+                        html.P(f"CPF: {cpf}"),
+                        html.P(f"Nome: {nome}"),
+                        html.Hr(),
+                        html.P(msg, className="mb-0")
+                    ], color="success")
+                else:
+                    return dbc.Alert([
+                        html.I(className="bi bi-x-circle-fill me-2"),
+                        f"Erro ao criar: {msg}"
+                    ], color="danger")
+            
+            # READ
+            elif trigger_id == "btn-read":
+                paciente = crud.buscar_paciente(cpf)
+                
+                if paciente:
+                    return dbc.Alert([
+                        html.H5([
+                            html.I(className="bi bi-person-check-fill me-2"),
+                            "Paciente Encontrado!"
+                        ], className="alert-heading mb-3"),
+                        dbc.ListGroup([
+                            dbc.ListGroupItem([html.Strong("CPF: "), paciente.get('cpf', 'N/A')]),
+                            dbc.ListGroupItem([html.Strong("Nome: "), paciente.get('nome', 'N/A')]),
+                            dbc.ListGroupItem([html.Strong("Email: "), paciente.get('email', 'N/A')]),
+                            dbc.ListGroupItem([html.Strong("Telefone: "), paciente.get('telefone', 'N/A')]),
+                            dbc.ListGroupItem([html.Strong("Data Nascimento: "), str(paciente.get('data_nascimento', 'N/A'))]),
+                            dbc.ListGroupItem([html.Strong("Gênero: "), paciente.get('genero', 'N/A')])
+                        ], flush=True)
+                    ], color="info")
+                else:
+                    return dbc.Alert([
+                        html.I(className="bi bi-person-x-fill me-2"),
+                        f"Paciente com CPF {cpf} não encontrado no Firebase."
+                    ], color="warning")
+            
+            # UPDATE
+            elif trigger_id == "btn-update":
+                # Verificar se o paciente existe
+                paciente_existente = crud.buscar_paciente(cpf)
+                if not paciente_existente:
+                    return dbc.Alert([
+                        html.I(className="bi bi-person-x-fill me-2"),
+                        f"Paciente com CPF {cpf} não encontrado. Crie-o primeiro."
+                    ], color="warning")
+                
+                # Atualizar apenas campos fornecidos
+                dados_atualizacao = {}
+                if nome:
+                    dados_atualizacao['nome'] = nome
+                if email:
+                    dados_atualizacao['email'] = email
+                if telefone:
+                    dados_atualizacao['telefone'] = telefone
+                
+                if not dados_atualizacao:
+                    return dbc.Alert([
+                        html.I(className="bi bi-exclamation-triangle-fill me-2"),
+                        "Forneça pelo menos um campo para atualizar (nome, email ou telefone)."
+                    ], color="warning")
+                
+                sucesso, msg = crud.atualizar_paciente(cpf, dados_atualizacao)
+                
+                if sucesso:
+                    campos_atualizados = ", ".join(dados_atualizacao.keys())
+                    return dbc.Alert([
+                        html.H5([
+                            html.I(className="bi bi-check-circle-fill me-2"),
+                            "Paciente Atualizado!"
+                        ], className="alert-heading"),
+                        html.P(f"CPF: {cpf}"),
+                        html.P(f"Campos atualizados: {campos_atualizados}"),
+                        html.Hr(),
+                        html.P(msg, className="mb-0")
+                    ], color="success")
+                else:
+                    return dbc.Alert([
+                        html.I(className="bi bi-x-circle-fill me-2"),
+                        f"Erro ao atualizar: {msg}"
+                    ], color="danger")
+            
+            # DELETE
+            elif trigger_id == "btn-delete":
+                # Verificar se o paciente existe
+                paciente_existente = crud.buscar_paciente(cpf)
+                if not paciente_existente:
+                    return dbc.Alert([
+                        html.I(className="bi bi-person-x-fill me-2"),
+                        f"Paciente com CPF {cpf} não encontrado."
+                    ], color="warning")
+                
+                sucesso, msg = crud.deletar_paciente(cpf)
+                
+                if sucesso:
+                    return dbc.Alert([
+                        html.H5([
+                            html.I(className="bi bi-trash-fill me-2"),
+                            "Paciente Deletado!"
+                        ], className="alert-heading"),
+                        html.P(f"CPF: {cpf} foi removido do Firebase."),
+                        html.Hr(),
+                        html.P(msg, className="mb-0 small")
+                    ], color="success")
+                else:
+                    return dbc.Alert([
+                        html.I(className="bi bi-x-circle-fill me-2"),
+                        f"Erro ao deletar: {msg}"
+                    ], color="danger")
+            
+        except ImportError as e:
+            return dbc.Alert([
+                html.H5([
+                    html.I(className="bi bi-exclamation-triangle-fill me-2"),
+                    "Módulos NoSQL Não Instalados"
+                ], className="alert-heading mb-3"),
+                html.P("Instale: pip install -r requirements_nosql.txt"),
+                html.Hr(),
+                html.P(f"Erro: {str(e)}", className="mb-0 small")
+            ], color="danger")
+        except Exception as e:
+            return dbc.Alert([
+                html.H5([
+                    html.I(className="bi bi-bug-fill me-2"),
+                    "Erro Inesperado"
+                ], className="alert-heading mb-3"),
+                html.P(f"Erro: {str(e)}"),
+                html.Hr(),
+                html.P("Verifique os logs para mais detalhes.", className="mb-0")
+            ], color="danger")
+        
+        return ""
+    
+    @callback(
         Output("migration-result", "children"),
         Input("btn-migrate", "n_clicks"),
         prevent_initial_call=True
