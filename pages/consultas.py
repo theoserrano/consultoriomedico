@@ -83,6 +83,20 @@ layout = dbc.Container([
         ])
     ], id="modal-delete-consulta", is_open=False),
     
+    # Modal para avisos dos triggers
+    dbc.Modal([
+        dbc.ModalHeader([
+            html.I(className="bi bi-exclamation-triangle-fill text-warning me-2"),
+            "Regra de Negócio Violada"
+        ], close_button=True),
+        dbc.ModalBody([
+            html.Div(id="modal-trigger-content", className="text-center py-4")
+        ]),
+        dbc.ModalFooter([
+            dbc.Button("Entendi", id="btn-fechar-modal-trigger", color="warning", className="w-100")
+        ])
+    ], id="modal-trigger-aviso", is_open=False, centered=True, size="lg"),
+    
     dcc.Store(id='store-consulta-acao'),
     dcc.Store(id='store-consulta-delete'),
     dcc.Store(id='store-refresh-trigger-cons', data=0),
@@ -212,6 +226,8 @@ def toggle_modal(novo_click, fechar_click):
     Output("alert-consulta", "children"),
     Output("modal-consulta", "is_open", allow_duplicate=True),
     Output("store-refresh-trigger-cons", "data"),
+    Output("modal-trigger-aviso", "is_open", allow_duplicate=True),
+    Output("modal-trigger-content", "children"),
     Input("btn-salvar-consulta", "n_clicks"),
     State("input-clinica-cons", "value"),
     State("input-medico-cons", "value"),
@@ -223,7 +239,7 @@ def toggle_modal(novo_click, fechar_click):
 )
 def salvar_consulta(n_clicks, cli, med, pac, data, hora, current_trigger):
     if not all([cli, med, pac, data, hora]):
-        return dbc.Alert("Todos os campos são obrigatórios!", color="danger", duration=3000), True, current_trigger or 0
+        return dbc.Alert("Todos os campos são obrigatórios!", color="danger", duration=3000), True, current_trigger or 0, False, ""
     
     try:
         data_hora = f"{data} {hora}:00"
@@ -239,17 +255,43 @@ def salvar_consulta(n_clicks, cli, med, pac, data, hora, current_trigger):
         if success:
             # Verifica se há warnings/avisos na mensagem (ex: triggers)
             if "Avisos:" in msg:
-                return dbc.Alert(["Consulta agendada! ", html.Br(), msg], color="warning", duration=5000), False, (current_trigger or 0) + 1
-            return dbc.Alert("Consulta agendada com sucesso!", color="success", duration=3000), False, (current_trigger or 0) + 1
+                return dbc.Alert(["Consulta agendada! ", html.Br(), msg], color="warning", duration=5000), False, (current_trigger or 0) + 1, False, ""
+            return dbc.Alert("Consulta agendada com sucesso!", color="success", duration=3000), False, (current_trigger or 0) + 1, False, ""
         else:
-            # Mensagens de erro dos triggers aparecem aqui
-            if "Regra de Negócio" in msg:
-                return dbc.Alert([html.Strong("Regra de Negócio Violada:"), html.Br(), msg.split(":", 1)[1] if ":" in msg else msg], color="danger", duration=7000), True, current_trigger or 0
+            # Mensagens de erro dos triggers aparecem aqui - detecta TRIGGER_AVISO
+            if "TRIGGER_AVISO" in msg:
+                # Extrai a mensagem do trigger
+                aviso_msg = msg.split("TRIGGER_AVISO:")[-1].strip().replace("'", "").replace('"', '')
+                modal_content = [
+                    html.Div([
+                        html.I(className="bi bi-exclamation-circle text-warning", style={"fontSize": "4rem"}),
+                    ], className="mb-3"),
+                    html.H4("Atenção!", className="mb-3 text-warning"),
+                    html.P(aviso_msg, className="lead mb-4", style={"fontSize": "1.2rem"}),
+                    html.Hr(),
+                    html.Small([
+                        html.I(className="bi bi-info-circle me-2"),
+                        "Esta é uma regra de negócio do consultório aplicada automaticamente"
+                    ], className="text-muted")
+                ]
+                # Mantém o modal de cadastro aberto para o usuário corrigir
+                return None, True, current_trigger or 0, True, modal_content
+            
             if "Duplicate entry" in msg or "já existe" in msg:
-                return dbc.Alert("Erro: Já existe uma consulta agendada neste horário para este médico!", color="danger", duration=5000), True, current_trigger or 0
-            return dbc.Alert(f"Erro: {msg}", color="danger", duration=5000), True, current_trigger or 0
+                return dbc.Alert("⚠️ Já existe uma consulta agendada neste horário para este médico!", color="danger", duration=5000), True, current_trigger or 0, False, ""
+            
+            # Qualquer outro erro
+            return dbc.Alert(f"Erro: {msg}", color="danger", duration=5000), True, current_trigger or 0, False, ""
     except Exception as e:
-        return dbc.Alert(f"Erro inesperado: {str(e)}", color="danger", duration=5000), True, current_trigger or 0
+        return dbc.Alert(f"Erro inesperado: {str(e)}", color="danger", duration=5000), True, current_trigger or 0, False, ""
+
+@callback(
+    Output("modal-trigger-aviso", "is_open"),
+    Input("btn-fechar-modal-trigger", "n_clicks"),
+    prevent_initial_call=True
+)
+def fechar_modal_trigger(n_clicks):
+    return False
 
 @callback(
     Output("modal-delete-consulta", "is_open"),
