@@ -86,7 +86,7 @@ class FirestoreCRUD:
     
     def deletar_paciente(self, cpf: str) -> Tuple[bool, str]:
         """
-        Deleta um paciente.
+        Deleta um paciente e todas as consultas associadas (CASCADE).
         
         Args:
             cpf: CPF do paciente
@@ -94,7 +94,27 @@ class FirestoreCRUD:
         Returns:
             Tuple[bool, str]: (sucesso, mensagem)
         """
-        return self.db.delete_document('pacientes', cpf)
+        try:
+            # Primeiro, deletar todas as consultas do paciente (CASCADE)
+            if FirebaseConfig.MODELING_MODE == 'embedded':
+                filters = [('paciente.cpf', '==', cpf)]
+            else:
+                filters = [('cpf_paciente', '==', cpf)]
+            
+            sucesso_consultas, msg_consultas, count = self.db.delete_documents_by_query('consultas', filters)
+            if count > 0:
+                logger.info(f"Deletadas {count} consultas do paciente {cpf} (CASCADE)")
+            
+            # Depois, deletar o paciente
+            sucesso, msg = self.db.delete_document('pacientes', cpf)
+            
+            if sucesso:
+                return True, f"Paciente deletado com sucesso. {count} consulta(s) também deletada(s)."
+            else:
+                return False, msg
+        except Exception as e:
+            logger.error(f"Erro ao deletar paciente com cascade: {e}")
+            return False, str(e)
     
     # ==================== MÉDICOS ====================
     
@@ -151,8 +171,36 @@ class FirestoreCRUD:
         return self.db.update_document('medicos', codigo, dados, merge=True)
     
     def deletar_medico(self, codigo: str) -> Tuple[bool, str]:
-        """Deleta um médico"""
-        return self.db.delete_document('medicos', codigo)
+        """
+        Deleta um médico e todas as consultas associadas (CASCADE).
+        
+        Args:
+            codigo: Código do médico
+        
+        Returns:
+            Tuple[bool, str]: (sucesso, mensagem)
+        """
+        try:
+            # Primeiro, deletar todas as consultas do médico (CASCADE)
+            if FirebaseConfig.MODELING_MODE == 'embedded':
+                filters = [('medico.codigo', '==', codigo)]
+            else:
+                filters = [('cod_medico', '==', codigo)]
+            
+            sucesso_consultas, msg_consultas, count = self.db.delete_documents_by_query('consultas', filters)
+            if count > 0:
+                logger.info(f"Deletadas {count} consultas do médico {codigo} (CASCADE)")
+            
+            # Depois, deletar o médico
+            sucesso, msg = self.db.delete_document('medicos', codigo)
+            
+            if sucesso:
+                return True, f"Médico deletado com sucesso. {count} consulta(s) também deletada(s)."
+            else:
+                return False, msg
+        except Exception as e:
+            logger.error(f"Erro ao deletar médico com cascade: {e}")
+            return False, str(e)
     
     # ==================== CLÍNICAS ====================
     
@@ -195,8 +243,36 @@ class FirestoreCRUD:
         return self.db.update_document('clinicas', codigo, dados, merge=True)
     
     def deletar_clinica(self, codigo: str) -> Tuple[bool, str]:
-        """Deleta uma clínica"""
-        return self.db.delete_document('clinicas', codigo)
+        """
+        Deleta uma clínica e todas as consultas associadas (CASCADE).
+        
+        Args:
+            codigo: Código da clínica
+        
+        Returns:
+            Tuple[bool, str]: (sucesso, mensagem)
+        """
+        try:
+            # Primeiro, deletar todas as consultas da clínica (CASCADE)
+            if FirebaseConfig.MODELING_MODE == 'embedded':
+                filters = [('clinica.codigo', '==', codigo)]
+            else:
+                filters = [('cod_clinica', '==', codigo)]
+            
+            sucesso_consultas, msg_consultas, count = self.db.delete_documents_by_query('consultas', filters)
+            if count > 0:
+                logger.info(f"Deletadas {count} consultas da clínica {codigo} (CASCADE)")
+            
+            # Depois, deletar a clínica
+            sucesso, msg = self.db.delete_document('clinicas', codigo)
+            
+            if sucesso:
+                return True, f"Clínica deletada com sucesso. {count} consulta(s) também deletada(s)."
+            else:
+                return False, msg
+        except Exception as e:
+            logger.error(f"Erro ao deletar clínica com cascade: {e}")
+            return False, str(e)
     
     # ==================== CONSULTAS ====================
     

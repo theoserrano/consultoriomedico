@@ -460,3 +460,119 @@ def register_callbacks(app):
             fig = {}
         
         return mysql_stats, firebase_stats, fig
+    
+    @callback(
+        Output("migration-result", "children"),
+        Input("btn-migrate", "n_clicks"),
+        prevent_initial_call=True
+    )
+    def start_migration(n_clicks):
+        """Inicia o processo de migração de dados"""
+        if not n_clicks:
+            return ""
+        
+        try:
+            # Importar módulos necessários
+            from nosql.migration import MySQLToFirestoreMigration
+            from db import db as mysql_db
+            from nosql.db_nosql import firebase_db
+            
+            # Verificar conexões
+            if not mysql_db.ensure_connected():
+                return dbc.Alert([
+                    html.I(className="bi bi-exclamation-triangle-fill me-2"),
+                    "Erro: Não foi possível conectar ao MySQL"
+                ], color="danger")
+            
+            if not firebase_db.connect():
+                return dbc.Alert([
+                    html.I(className="bi bi-exclamation-triangle-fill me-2"),
+                    "Erro: Não foi possível conectar ao Firebase"
+                ], color="danger")
+            
+            # Criar instância de migração
+            migration = MySQLToFirestoreMigration()
+            
+            # Executar migração
+            sucesso = migration.migrar_tudo(limite_consultas=100)
+            
+            # Preparar resultado
+            stats = migration.stats
+            
+            if sucesso:
+                return dbc.Alert([
+                    html.H5([
+                        html.I(className="bi bi-check-circle-fill me-2"),
+                        "Migração Concluída com Sucesso!"
+                    ], className="alert-heading mb-3"),
+                    html.Hr(),
+                    html.H6("Resumo da Migração:"),
+                    dbc.ListGroup([
+                        dbc.ListGroupItem([
+                            html.Strong("Pacientes: "),
+                            f"{stats['pacientes']['migrados']} migrados, {stats['pacientes']['erros']} erros"
+                        ]),
+                        dbc.ListGroupItem([
+                            html.Strong("Médicos: "),
+                            f"{stats['medicos']['migrados']} migrados, {stats['medicos']['erros']} erros"
+                        ]),
+                        dbc.ListGroupItem([
+                            html.Strong("Clínicas: "),
+                            f"{stats['clinicas']['migrados']} migrados, {stats['clinicas']['erros']} erros"
+                        ]),
+                        dbc.ListGroupItem([
+                            html.Strong("Consultas: "),
+                            f"{stats['consultas']['migrados']} migrados, {stats['consultas']['erros']} erros"
+                        ])
+                    ], flush=True, className="mt-3")
+                ], color="success")
+            else:
+                return dbc.Alert([
+                    html.H5([
+                        html.I(className="bi bi-exclamation-triangle-fill me-2"),
+                        "Migração Concluída com Alguns Erros"
+                    ], className="alert-heading mb-3"),
+                    html.Hr(),
+                    html.H6("Resumo da Migração:"),
+                    dbc.ListGroup([
+                        dbc.ListGroupItem([
+                            html.Strong("Pacientes: "),
+                            f"{stats['pacientes']['migrados']} migrados, {stats['pacientes']['erros']} erros"
+                        ]),
+                        dbc.ListGroupItem([
+                            html.Strong("Médicos: "),
+                            f"{stats['medicos']['migrados']} migrados, {stats['medicos']['erros']} erros"
+                        ]),
+                        dbc.ListGroupItem([
+                            html.Strong("Clínicas: "),
+                            f"{stats['clinicas']['migrados']} migrados, {stats['clinicas']['erros']} erros"
+                        ]),
+                        dbc.ListGroupItem([
+                            html.Strong("Consultas: "),
+                            f"{stats['consultas']['migrados']} migrados, {stats['consultas']['erros']} erros"
+                        ])
+                    ], flush=True, className="mt-3"),
+                    html.Hr(),
+                    html.P("Verifique os logs para mais detalhes sobre os erros.")
+                ], color="warning")
+                
+        except ImportError as e:
+            return dbc.Alert([
+                html.H5([
+                    html.I(className="bi bi-exclamation-triangle-fill me-2"),
+                    "Erro: Módulos NoSQL Não Instalados"
+                ], className="alert-heading mb-3"),
+                html.P(f"Instale as dependências: pip install -r requirements_nosql.txt"),
+                html.Hr(),
+                html.P(f"Detalhes: {str(e)}")
+            ], color="danger")
+        except Exception as e:
+            return dbc.Alert([
+                html.H5([
+                    html.I(className="bi bi-bug-fill me-2"),
+                    "Erro Durante a Migração"
+                ], className="alert-heading mb-3"),
+                html.P(f"Erro: {str(e)}"),
+                html.Hr(),
+                html.P("Verifique os logs para mais detalhes.")
+            ], color="danger")
