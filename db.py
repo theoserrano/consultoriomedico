@@ -24,19 +24,20 @@ class Database:
 
     def _connect_mysql(self):
         try:
+            # Não usar pool, criar conexão direta para evitar problemas
             self.connection = mysql.connector.connect(
                 host=Config.DB_HOST,
                 port=Config.DB_PORT,
                 user=Config.DB_USER,
                 password=Config.DB_PASSWORD,
                 database=Config.DB_NAME,
-                pool_name='consultorio_pool',
-                pool_size=5,
-                pool_reset_session=True,
-                autocommit=True,
-                connect_timeout=10,
-                use_pure=True,
-                ssl_disabled=True  # Desabilita SSL para localhost
+                autocommit=False,  # Melhor controle de transações
+                connect_timeout=15,
+                use_pure=False,  # Usar C extension para melhor performance
+                charset='utf8mb4',
+                collation='utf8mb4_unicode_ci',
+                get_warnings=True,
+                raise_on_warnings=False
             )
             logger.info(f"Conectado ao banco {Config.DB_NAME}@{Config.DB_HOST}:{Config.DB_PORT} como {Config.DB_USER}")
             return self.connection
@@ -141,15 +142,23 @@ class Database:
             if self.use_sqlite and self.sqlite_conn:
                 return True
 
-            if self.connection and getattr(self.connection, 'is_connected', lambda: False)():
-                # Testa a conexão com ping
+            if self.connection:
+                # Verifica se está conectado
                 try:
-                    self.connection.ping(reconnect=True, attempts=3, delay=1)
-                    return True
-                except:
-                    pass
-        except Exception:
-            pass
+                    if self.connection.is_connected():
+                        # Testa a conexão com ping
+                        self.connection.ping(reconnect=True, attempts=1, delay=0)
+                        return True
+                except Exception as e:
+                    logger.warning(f"Conexão perdida: {e}")
+                    # Fecha conexão antiga
+                    try:
+                        self.connection.close()
+                    except:
+                        pass
+                    self.connection = None
+        except Exception as e:
+            logger.warning(f"Erro ao verificar conexão: {e}")
 
         # tentar reconectar
         logger.info("Reconectando ao banco...")
@@ -158,7 +167,7 @@ class Database:
         if self.use_sqlite:
             ok = self.sqlite_conn is not None
         else:
-            ok = conn is not None and getattr(conn, 'is_connected', lambda: False)()
+            ok = conn is not None and self.connection.is_connected()
 
         if ok:
             logger.info("Conexão restabelecida")
@@ -191,16 +200,21 @@ class Database:
         cursor = self.connection.cursor()
         try:
             cursor.execute(query, params or ())
-            self.connection.commit()
             
             # Captura warnings do MySQL (incluindo triggers)
             warnings = []
-            if cursor.warnings:
-                cursor.execute("SHOW WARNINGS")
-                for level, code, message in cursor.fetchall():
-                    warning_msg = f"{level} ({code}): {message}"
-                    warnings.append(warning_msg)
-                    logger.warning(f"MySQL Warning: {warning_msg}")
+            try:
+                if cursor.warnings:
+                    cursor.execute("SHOW WARNINGS")
+                    for level, code, message in cursor.fetchall():
+                        warning_msg = f"{level} ({code}): {message}"
+                        warnings.append(warning_msg)
+                        logger.warning(f"MySQL Warning: {warning_msg}")
+            except:
+                pass
+            
+            # Commit explícito
+            self.connection.commit()
             
             if warnings:
                 return True, "Operação realizada. Avisos: " + "; ".join(warnings)
@@ -208,6 +222,10 @@ class Database:
         except Error as e:
             error_msg = str(e)
             logger.error(f"Erro ao executar query: {error_msg}")
+            try:
+                self.connection.rollback()
+            except:
+                pass
             return False, error_msg
         finally:
             try:
@@ -236,13 +254,19 @@ class Database:
         try:
             cursor = self.connection.cursor(dictionary=True, buffered=True)
             cursor.execute(query, params or ())
-            # Materializa completamente os resultados convertendo para dicionários Python nativos
-            rows = []
-            for row in cursor.fetchall():
-                rows.append(dict(row))
-            return rows
+            # Materializa completamente os resultados
+            rows = cursor.fetchall()
+            # Converte para dicionários Python nativos para evitar problemas de cursor
+            result = [dict(row) for row in rows]
+            return result
         except Error as e:
             logger.error(f"Erro ao buscar dados: {e}")
+            # Tenta reconectar na próxima chamada
+            try:
+                self.connection.close()
+            except:
+                pass
+            self.connection = None
             return []
         except Exception as e:
             logger.error(f"Erro inesperado ao buscar dados: {e}")

@@ -6,7 +6,17 @@ import plotly.graph_objs as go
 import plotly.express as px
 from db import db
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
+import logging
+
+logger = logging.getLogger("consultorio.analytics")
+
+# Cache simples para dados
+_cache = {
+    'data': None,
+    'timestamp': None,
+    'ttl': 300  # 5 minutos
+}
 
 
 def build_layout():
@@ -76,13 +86,28 @@ def build_layout():
             ])
         ], className="mb-4 shadow-sm border-0", style={'zIndex': 1050, 'position': 'relative'}),
 
+        # Loading indicator
+        dcc.Loading(
+            id="analytics-loading",
+            type="default",
+            children=[
+                html.Div(id="analytics-content", children=[
         # Gráficos
         dbc.Row([
             dbc.Col([
                 dbc.Card([
                     dbc.CardHeader(html.H5("📈 Série Temporal - Consultas por Dia", className="mb-0")),
                     dbc.CardBody([
-                        dcc.Graph(id='analytics-graph-timeseries', config={'displayModeBar': True})
+                        dcc.Graph(
+                            id='analytics-graph-timeseries',
+                            figure=go.Figure().update_layout(
+                                title="Clique em 'Aplicar Filtros' para carregar os dados",
+                                xaxis=dict(visible=False),
+                                yaxis=dict(visible=False),
+                                annotations=[dict(text="Aguardando filtros...", showarrow=False, font=dict(size=16))]
+                            ),
+                            config={'displayModeBar': True}
+                        )
                     ])
                 ], className="shadow-sm border-0", style={'zIndex': 1, 'position': 'relative'})
             ], md=12),
@@ -93,7 +118,14 @@ def build_layout():
                 dbc.Card([
                     dbc.CardHeader(html.H5("👨‍⚕️ Consultas por Médico", className="mb-0")),
                     dbc.CardBody([
-                        dcc.Graph(id='analytics-graph-by-medico', config={'displayModeBar': True})
+                        dcc.Graph(
+                            id='analytics-graph-by-medico',
+                            figure=go.Figure().update_layout(
+                                xaxis=dict(visible=False),
+                                yaxis=dict(visible=False)
+                            ),
+                            config={'displayModeBar': True}
+                        )
                     ])
                 ], className="shadow-sm border-0", style={'zIndex': 1, 'position': 'relative'})
             ], md=6),
@@ -101,7 +133,14 @@ def build_layout():
                 dbc.Card([
                     dbc.CardHeader(html.H5("🏥 Consultas por Clínica", className="mb-0")),
                     dbc.CardBody([
-                        dcc.Graph(id='analytics-graph-by-clinica', config={'displayModeBar': True})
+                        dcc.Graph(
+                            id='analytics-graph-by-clinica',
+                            figure=go.Figure().update_layout(
+                                xaxis=dict(visible=False),
+                                yaxis=dict(visible=False)
+                            ),
+                            config={'displayModeBar': True}
+                        )
                     ])
                 ], className="shadow-sm border-0", style={'zIndex': 1, 'position': 'relative'})
             ], md=6),
@@ -112,7 +151,14 @@ def build_layout():
                 dbc.Card([
                     dbc.CardHeader(html.H5("👤 Distribuição por Gênero", className="mb-0")),
                     dbc.CardBody([
-                        dcc.Graph(id='analytics-graph-gender', config={'displayModeBar': True})
+                        dcc.Graph(
+                            id='analytics-graph-gender',
+                            figure=go.Figure().update_layout(
+                                xaxis=dict(visible=False),
+                                yaxis=dict(visible=False)
+                            ),
+                            config={'displayModeBar': True}
+                        )
                     ])
                 ], className="shadow-sm border-0", style={'zIndex': 1, 'position': 'relative'})
             ], md=4),
@@ -120,7 +166,14 @@ def build_layout():
                 dbc.Card([
                     dbc.CardHeader(html.H5("📊 Distribuição de Idades", className="mb-0")),
                     dbc.CardBody([
-                        dcc.Graph(id='analytics-graph-age-hist', config={'displayModeBar': True})
+                        dcc.Graph(
+                            id='analytics-graph-age-hist',
+                            figure=go.Figure().update_layout(
+                                xaxis=dict(visible=False),
+                                yaxis=dict(visible=False)
+                            ),
+                            config={'displayModeBar': True}
+                        )
                     ])
                 ], className="shadow-sm border-0", style={'zIndex': 1, 'position': 'relative'})
             ], md=4),
@@ -128,7 +181,14 @@ def build_layout():
                 dbc.Card([
                     dbc.CardHeader(html.H5("🔢 Boxplot: Idades por Médico", className="mb-0")),
                     dbc.CardBody([
-                        dcc.Graph(id='analytics-graph-box-age', config={'displayModeBar': True})
+                        dcc.Graph(
+                            id='analytics-graph-box-age',
+                            figure=go.Figure().update_layout(
+                                xaxis=dict(visible=False),
+                                yaxis=dict(visible=False)
+                            ),
+                            config={'displayModeBar': True}
+                        )
                     ])
                 ], className="shadow-sm border-0", style={'zIndex': 1, 'position': 'relative'})
             ], md=4),
@@ -139,7 +199,14 @@ def build_layout():
                 dbc.Card([
                     dbc.CardHeader(html.H5("🔥 Heatmap: Hora do Dia x Dia da Semana", className="mb-0")),
                     dbc.CardBody([
-                        dcc.Graph(id='analytics-graph-heatmap', config={'displayModeBar': True})
+                        dcc.Graph(
+                            id='analytics-graph-heatmap',
+                            figure=go.Figure().update_layout(
+                                xaxis=dict(visible=False),
+                                yaxis=dict(visible=False)
+                            ),
+                            config={'displayModeBar': True}
+                        )
                     ])
                 ], className="shadow-sm border-0", style={'zIndex': 1, 'position': 'relative'})
             ], md=8),
@@ -147,11 +214,21 @@ def build_layout():
                 dbc.Card([
                     dbc.CardHeader(html.H5("⭐ Scatter: Consultas por Médico", className="mb-0")),
                     dbc.CardBody([
-                        dcc.Graph(id='analytics-graph-scatter', config={'displayModeBar': True})
+                        dcc.Graph(
+                            id='analytics-graph-scatter',
+                            figure=go.Figure().update_layout(
+                                xaxis=dict(visible=False),
+                                yaxis=dict(visible=False)
+                            ),
+                            config={'displayModeBar': True}
+                        )
                     ])
                 ], className="shadow-sm border-0", style={'zIndex': 1, 'position': 'relative'})
             ], md=4),
         ], className="mb-3"),
+                ])
+            ]
+        ),
 
     ], fluid=True)
 
@@ -171,34 +248,61 @@ def register_callbacks(app):
         State('analytics-filter-clinica', 'value'),
         State('analytics-filter-medico', 'value'),
         State('analytics-filter-periodo', 'start_date'),
-        State('analytics-filter-periodo', 'end_date')
+        State('analytics-filter-periodo', 'end_date'),
+        prevent_initial_call=True
     )
     def update_all(n_clicks, clinica, medico, start_date, end_date):
-        # Monta query com filtros
-        sql = ("SELECT c.CodCli, c.CodMed, c.CpfPaciente, c.Data_Hora, cl.NomeCli, m.NomeMed, "
-               "p.NomePac, p.DataNascimento, p.Genero as GeneroPac, m.Genero as GeneroMed, m.Especialidade "
-               "FROM tabelaconsulta c "
-               "JOIN tabelaclinica cl ON c.CodCli=cl.CodCli "
-               "JOIN tabelamedico m ON c.CodMed=m.CodMed "
-               "JOIN tabelapaciente p ON c.CpfPaciente=p.CpfPaciente "
-               "WHERE 1=1 ")
-        params = []
-        if clinica:
-            sql += ' AND c.CodCli = %s'
-            params.append(clinica)
-        if medico:
-            sql += ' AND c.CodMed = %s'
-            params.append(medico)
-        if start_date:
-            sql += ' AND c.Data_Hora >= %s'
-            params.append(start_date)
-        if end_date:
-            sql += ' AND c.Data_Hora <= %s'
-            params.append(end_date)
+        # Verifica cache
+        cache_key = f"{clinica}_{medico}_{start_date}_{end_date}"
+        now = datetime.now()
+        
+        if (_cache['data'] is not None and 
+            _cache['timestamp'] and 
+            (now - _cache['timestamp']).seconds < _cache['ttl'] and
+            _cache.get('key') == cache_key):
+            logger.info("Usando dados em cache")
+            df = _cache['data']
+        else:
+            # Monta query otimizada com filtros
+            # Se não houver filtros de data, limita aos últimos 90 dias por padrão
+            if not start_date and not end_date:
+                default_start = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
+                start_date = default_start
+                logger.info(f"Aplicando filtro padrão: últimos 90 dias desde {start_date}")
+            
+            # Query otimizada: seleciona apenas colunas necessárias
+            sql = ("SELECT c.CodCli, c.CodMed, c.CpfPaciente, c.Data_Hora, "
+                   "cl.NomeCli, m.NomeMed, p.DataNascimento, p.Genero as GeneroPac "
+                   "FROM tabelaconsulta c "
+                   "INNER JOIN tabelaclinica cl ON c.CodCli=cl.CodCli "
+                   "INNER JOIN tabelamedico m ON c.CodMed=m.CodMed "
+                   "INNER JOIN tabelapaciente p ON c.CpfPaciente=p.CpfPaciente "
+                   "WHERE 1=1 ")
+            params = []
+            
+            if clinica:
+                sql += ' AND c.CodCli = %s'
+                params.append(clinica)
+            if medico:
+                sql += ' AND c.CodMed = %s'
+                params.append(medico)
+            if start_date:
+                sql += ' AND c.Data_Hora >= %s'
+                params.append(start_date)
+            if end_date:
+                sql += ' AND c.Data_Hora <= %s'
+                params.append(end_date)
 
-        # Busca dados
-        rows = db.fetch_all_paginated(sql + ' ORDER BY c.Data_Hora', params, limit=10000)
-        df = pd.DataFrame(rows) if rows else pd.DataFrame()
+            # Busca dados com limite
+            logger.info(f"Buscando dados com filtros: clinica={clinica}, medico={medico}, período={start_date} a {end_date}")
+            rows = db.fetch_all_paginated(sql + ' ORDER BY c.Data_Hora DESC', params, limit=5000)
+            df = pd.DataFrame(rows) if rows else pd.DataFrame()
+            
+            # Atualiza cache
+            _cache['data'] = df
+            _cache['timestamp'] = now
+            _cache['key'] = cache_key
+            logger.info(f"Cache atualizado com {len(df)} registros")
 
         # Figuras vazias por padrão
         empty_fig = go.Figure().update_layout(
@@ -334,7 +438,8 @@ def register_callbacks(app):
     @app.callback(
         Output('analytics-filter-clinica', 'options'),
         Output('analytics-filter-medico', 'options'),
-        Input('url', 'pathname')
+        Input('url', 'pathname'),
+        prevent_initial_call=False
     )
     def populate_filters(_pathname):
         clinicas = db.get_clinicas() or []
